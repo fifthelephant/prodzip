@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { SiteImage } from "@/components/SiteImage";
 import { images } from "@/content/images";
 import { nav, site } from "@/content/site";
 
@@ -55,8 +56,5 @@ export function Header() {
 }
 
 function SiteLogo() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={images.logo} alt={site.name} className="brand-logo" />
-  );
+  return <SiteImage src={images.logo} alt={site.name} className="brand-logo" />;
 }

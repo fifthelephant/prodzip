@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteImage } from "@/components/SiteImage";
 import { images } from "@/content/images";
 import { occasions } from "@/content/occasions";
 import { locations, site } from "@/content/site";
@@ -8,8 +9,7 @@ export function Footer() {
     <footer className="site-footer">
       <div className="footer-grid">
         <div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={images.logo} alt="" className="footer-logo" />
+          <SiteImage src={images.logo} alt="" className="footer-logo" />
           <p>{site.footerNote}</p>
           <p className="footer-links-row">
             <a href={site.instagram} target="_blank" rel="noreferrer">
