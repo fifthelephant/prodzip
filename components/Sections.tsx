@@ -35,7 +35,7 @@ export function FounderStory() {
   return (
     <section className="section">
       <div className="section-head">
-        <p className="eyebrow">{site.founderHeading}</p>
+        <h2 className="founder-heading">{site.founderHeading}</h2>
       </div>
       <div className="founder">
         <div className="founder-photo">

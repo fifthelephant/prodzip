@@ -1,7 +1,10 @@
 import { STORE } from "@/data/order-store/config";
+import type { Address, DeliveryZone, FulfillmentMode } from "./types";
 
 const AREAS = STORE.deliveryAreas.map((a) => a.toLowerCase());
 const ADMIN_PARTS = ["state", "state_district", "county", "city", "town", "city_district", "municipality"];
+const GURUGRAM = ["gurugram", "gurgaon"];
+const ACTUALS = ["new delhi", "delhi", "greater noida", "noida", "gautam buddha nagar", "faridabad", "ghaziabad"];
 
 /**
  * Is this place inside the delivery area? Uses the administrative parts of an
@@ -22,4 +25,22 @@ export function inServiceArea(addr: Record<string, string> | null, text = ""): b
 export function inServiceBox(lat: number, lng: number): boolean {
   const b = STORE.serviceBox;
   return lat >= b.south && lat <= b.north && lng >= b.west && lng <= b.east;
+}
+
+function addressHaystack(addr: Record<string, string> | null, text = ""): string {
+  const parts = addr ? ADMIN_PARTS.map((k) => addr[k] || "") : [];
+  return [...parts, text].join(" ").toLowerCase();
+}
+
+/** Gurugram is a flat ₹150 fee; Delhi, Noida, Faridabad and Ghaziabad are billed on actuals. */
+export function detectDeliveryZone(addr: Record<string, string> | null, text = ""): DeliveryZone {
+  const haystack = addressHaystack(addr, text);
+  if (GURUGRAM.some((name) => haystack.includes(name))) return "gurugram";
+  if (ACTUALS.some((name) => haystack.includes(name))) return "actuals";
+  return "unknown";
+}
+
+export function resolveDeliveryZone(address: Address | null | undefined, fulfillment: FulfillmentMode): DeliveryZone {
+  if (fulfillment === "pickup" || !address?.ok) return "unknown";
+  return address.zone || detectDeliveryZone(null, address.text);
 }

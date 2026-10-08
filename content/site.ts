@@ -5,7 +5,7 @@
 export const site = {
   name: "Marwadi Khana",
   tagline: "Experience Royal Catering, Enjoy Home-Cooked Comfort",
-  heroTitle: "Crafting Memorable Gatherings with Authentic Home-Style Catering",
+  heroTitle: "Rooted in Tradition, Crafted for your celebrations",
   heroLede:
     "Comforting, freshly prepared royal Rajasthani vegetarian food for poojas, baby showers, family functions, prayer meetings and intimate gatherings across Delhi NCR.",
   description:

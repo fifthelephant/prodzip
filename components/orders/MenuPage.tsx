@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { STORE } from "@/data/order-store/config";
 import { money } from "@/lib/order-store/format";
 import { itemHref } from "@/lib/order-store/catalog";
@@ -78,39 +78,12 @@ function ItemCard({ item, openItem }: { item: MenuItem; openItem: (id: string) =
   );
 }
 
-function CategoryPicker({ onClose }: { onClose: () => void }) {
-  const { catalog, now, jumpTo } = useShop();
-  const first = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    first.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  const cats = catalog.categories
-    .map((c) => ({ ...c, n: c.items.filter((i) => !isRetired(i, now)).length }))
-    .filter((c) => c.n);
-  return (
-    <>
-      <div className="scrim" onClick={onClose} />
-      <div className="cat-pop" role="menu">
-        {cats.map((c, i) => (
-          <button key={c.id} ref={i === 0 ? first : undefined} role="menuitem" data-cat={c.id} onClick={() => { onClose(); jumpTo(c.id); }}>
-            <span>{c.name}</span><span>{c.n}</span>
-          </button>
-        ))}
-      </div>
-    </>
-  );
-}
-
 export default function MenuPage() {
   const shop = useShop();
   const { ready, inventoryFailed, retryInventory, catalog, now, filters: f, setFilters, searchText: q, setSearchText: setQ,
     collapsed, setCollapsed, showSearch, setShowSearch, showFilters, setShowFilters, getMenuScroll, saveMenuScroll,
     takePendingJump, jumpTick, cart, cartCount } = shop;
   const router = useRouter();
-  const [pickerOpen, setPickerOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { document.title = `${STORE.name} · Order Mithai Online`; }, []);
@@ -133,7 +106,7 @@ export default function MenuPage() {
     return () => clearTimeout(t);
   }, [q, f.q, setFilters]);
 
-  // Jump to a category (from the Menu button, banner or drawer). jumpTo() has
+  // Jump to a category (from the category list, banner or drawer). jumpTo() has
   // already cleared any filters hiding it, so here we only scroll.
   useEffect(() => {
     if (!ready) return;
@@ -144,6 +117,9 @@ export default function MenuPage() {
   if (!ready) return <Loading failed={inventoryFailed} onRetry={retryInventory} />;
 
   const openItem = (id: string) => { saveMenuScroll(window.scrollY); router.push(itemHref(id)); };
+  const allCats = catalog.categories
+    .map((c) => ({ ...c, n: c.items.filter((i) => !isRetired(i, now)).length }))
+    .filter((c) => c.n);
   const cats = catalog.categories
     .map((cat) => ({ ...cat, list: cat.items.filter((i) => !isRetired(i, now) && matches(i, f)) }))
     .filter((c) => c.list.length);
@@ -154,7 +130,6 @@ export default function MenuPage() {
   return (
     <>
       <div className="toolbar">
-        <button className="pill" id="catBtn" onClick={() => setPickerOpen(true)}>Menu</button>
         <span className="spacer" />
         <button
           className={`round${showSearch ? " on" : ""}`}
@@ -182,33 +157,47 @@ export default function MenuPage() {
         <button className={`chip${f.under500 ? " on" : ""}`} data-filter="under500" onClick={() => toggleFilter("under500")}>Under {STORE.currency}500</button>
       </div>
 
-      {banner && !filtering && cats.some((c) => c.id === banner.category) ? (
-        <section className="banner">
-          <h3>{banner.title}</h3>
-          <p>{banner.text}</p>
-          <button data-jump={banner.category} onClick={() => shop.jumpTo(banner.category)}>{banner.cta} →</button>
-        </section>
-      ) : null}
+      <div className="menu-body">
+        {allCats.length ? (
+          <nav className="cat-nav" aria-label="Menu categories">
+            {allCats.map((c) => (
+              <button key={c.id} type="button" data-cat={c.id} onClick={() => shop.jumpTo(c.id)}>
+                {c.name} ({c.n})
+              </button>
+            ))}
+          </nav>
+        ) : null}
 
-      {cats.length ? cats.map((cat) => {
-        const isCollapsed = !!collapsed[cat.id] && !filtering;
-        return (
-          <section key={cat.id} className={`category${isCollapsed ? " collapsed" : ""}`} id={`cat-${cat.id}`}>
-            <button className="cat-head" data-toggle={cat.id} aria-expanded={!collapsed[cat.id]} onClick={() => setCollapsed((c) => ({ ...c, [cat.id]: !c[cat.id] }))}>
-              <h2>{cat.name} <small>({cat.list.length})</small></h2>
-              <svg className="chev" viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="m12 8-6 6 1.4 1.4 4.6-4.6 4.6 4.6L18 14z" /></svg>
-            </button>
-            {cat.subtitle ? <p className="cat-sub">{cat.subtitle}</p> : null}
-            <div className="items">{cat.list.map((item) => <ItemCard key={item.id} item={item} openItem={openItem} />)}</div>
-          </section>
-        );
-      }) : <p className="empty">No items match your search.</p>}
+        <div className="menu-main">
+          {banner && !filtering && cats.some((c) => c.id === banner.category) ? (
+            <section className="banner">
+              <h3>{banner.title}</h3>
+              <p>{banner.text}</p>
+              <button data-jump={banner.category} onClick={() => shop.jumpTo(banner.category)}>{banner.cta} →</button>
+            </section>
+          ) : null}
 
-      <footer className="site-foot">
-        <strong>{STORE.name}</strong> · {STORE.city}<br />
-        {STORE.phone} · {STORE.email}<br />
-        All our mithai is 100% vegetarian. Images are for representation only.
-      </footer>
+          {cats.length ? cats.map((cat) => {
+            const isCollapsed = !!collapsed[cat.id] && !filtering;
+            return (
+              <section key={cat.id} className={`category${isCollapsed ? " collapsed" : ""}`} id={`cat-${cat.id}`}>
+                <button className="cat-head" data-toggle={cat.id} aria-expanded={!collapsed[cat.id]} onClick={() => setCollapsed((c) => ({ ...c, [cat.id]: !c[cat.id] }))}>
+                  <h2>{cat.name} <small>({cat.list.length})</small></h2>
+                  <svg className="chev" viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="m12 8-6 6 1.4 1.4 4.6-4.6 4.6 4.6L18 14z" /></svg>
+                </button>
+                {cat.subtitle ? <p className="cat-sub">{cat.subtitle}</p> : null}
+                <div className="items">{cat.list.map((item) => <ItemCard key={item.id} item={item} openItem={openItem} />)}</div>
+              </section>
+            );
+          }) : <p className="empty">No items match your search.</p>}
+
+          <footer className="site-foot">
+            <strong>{STORE.name}</strong> · {STORE.city}<br />
+            {STORE.phone} · {STORE.email}<br />
+            All our mithai is 100% vegetarian. Images are for representation only.
+          </footer>
+        </div>
+      </div>
 
       {cartCount ? (
         <Link className="cart-bar" href="/orders/cart/">
@@ -217,7 +206,6 @@ export default function MenuPage() {
         </Link>
       ) : null}
 
-      {pickerOpen ? <CategoryPicker onClose={() => setPickerOpen(false)} /> : null}
     </>
   );
 }

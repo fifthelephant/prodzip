@@ -1,7 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { SiteImage } from "@/components/SiteImage";
-import { images } from "@/content/images";
 import { menu, menuIntro } from "@/content/menu";
 
 export const metadata: Metadata = {
@@ -50,29 +47,6 @@ export default function MenuPage() {
             )}
           </article>
         ))}
-      </section>
-
-      <section className="section">
-        <div className="section-head">
-          <p className="eyebrow">From the kitchen</p>
-          <h2>Menu cards</h2>
-          <p className="lede">
-            Printed menu cards from the Marwadi Khana kitchen. Any of these dishes can be combined
-            into a menu for your gathering.
-          </p>
-        </div>
-        <div className="card-scroll">
-          {images.menuCards.map((src, index) => (
-            <div key={src} className="media menu-scan">
-              <SiteImage src={src} alt={`Marwadi Khana menu card ${index + 1}`} />
-            </div>
-          ))}
-        </div>
-        <p className="center-link">
-          <Link href="/quote" className="btn btn-gold">
-            Build a menu for your gathering
-          </Link>
-        </p>
       </section>
     </>
   );

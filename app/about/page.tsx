@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CtaBand, OccasionGrid, Process } from "@/components/Sections";
+import { OccasionGrid, Process } from "@/components/Sections";
 import { SiteImage } from "@/components/SiteImage";
 import { images } from "@/content/images";
 import { site } from "@/content/site";
@@ -26,7 +26,7 @@ export default function AboutPage() {
     <>
       <section className="page-hero">
         <p className="eyebrow">Our Legacy & Mission</p>
-        <h1>About {site.name}</h1>
+        <h1 className="title-maroon">About {site.name}</h1>
         <p className="lede">Inspired by a Tradition. Built Around Hospitality.</p>
       </section>
 
@@ -122,7 +122,6 @@ export default function AboutPage() {
 
       <OccasionGrid />
       <Process />
-      <CtaBand />
     </>
   );
 }

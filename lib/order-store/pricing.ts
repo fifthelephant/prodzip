@@ -1,5 +1,6 @@
 import { STORE } from "@/data/order-store/config";
-import type { CartLine, FulfillmentMode, MenuItem, Totals } from "./types";
+import { money } from "./format";
+import type { CartLine, DeliveryZone, FulfillmentMode, MenuItem, Totals } from "./types";
 
 /**
  * A choice can scale the base price (factor: 0.5 = half a kg) and/or add a
@@ -46,9 +47,21 @@ export function selLabel(item: MenuItem, sel: number[][]): string {
 
 export const lineKey = (id: string, sel: number[][]) => id + "|" + JSON.stringify(sel);
 
-export function totals(cart: CartLine[], items: Record<string, MenuItem>, fulfillment: FulfillmentMode = "delivery"): Totals {
+export function totals(
+  cart: CartLine[],
+  items: Record<string, MenuItem>,
+  fulfillment: FulfillmentMode = "delivery",
+  zone: DeliveryZone = "unknown",
+): Totals {
   const sub = cart.reduce((a, l) => (items[l.id] ? a + unitPrice(items[l.id], l.sel) * l.qty : a), 0);
-  const delivery = fulfillment === "delivery" && sub > 0 && !(STORE.freeDeliveryAbove && sub >= STORE.freeDeliveryAbove) ? STORE.deliveryFee : 0;
+  const delivery = fulfillment === "delivery" && sub > 0 && zone === "gurugram" ? STORE.deliveryFee : 0;
   const tax = Math.round(sub * STORE.taxRate);
   return { sub, delivery, tax, total: sub + delivery + tax, belowMin: fulfillment === "delivery" && sub < STORE.minOrder };
+}
+
+export function deliveryDisplay(t: Totals, fulfillment: FulfillmentMode, zone: DeliveryZone): string {
+  if (fulfillment === "pickup") return "Not applicable";
+  if (zone === "gurugram") return money(t.delivery);
+  if (zone === "actuals") return "On actuals";
+  return "As per location";
 }

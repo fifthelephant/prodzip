@@ -69,6 +69,28 @@
   border: 0; border-radius: 999px; background: var(--primary); color: #fff; padding: 7px 18px; font-weight: 500;
 }
 .ordering-app .toolbar .spacer { flex: 1; }
+.ordering-app .menu-body { display: block; }
+.ordering-app .cat-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 16px 16px 8px;
+  background: var(--cream);
+}
+.ordering-app .cat-nav button {
+  border: 0;
+  background: none;
+  border-radius: 0;
+  padding: 10px 0;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: #3a3a3a;
+  text-align: left;
+  line-height: 1.45;
+}
+.ordering-app .cat-nav button:hover { color: var(--primary); }
+.ordering-app .menu-main { min-width: 0; }
 .ordering-app .round {
   width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: #fff;
   display: grid; place-items: center; color: var(--primary);
@@ -242,6 +264,13 @@
 .ordering-app .note { font-size: .8rem; color: var(--maroon); background: #fdeef0; padding: 8px 12px; border-radius: 8px; margin-top: 10px; }
 .ordering-app .pay-foot .inner { flex-direction: column; align-items: stretch; gap: 8px; }
 .ordering-app .pay-foot .topay { display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 600; }
+.ordering-app .delivery-actuals-note {
+  margin: 0;
+  font-weight: 700;
+  font-size: .92rem;
+  line-height: 1.4;
+  color: var(--ink);
+}
 
 /* ---------- Checkout form ---------- */
 .ordering-app .field { margin-bottom: 16px; }
@@ -264,9 +293,11 @@
 }
 .ordering-app .addr-box.empty { color: var(--muted); border-style: dashed; border-color: var(--line); background: #fff; cursor: pointer; }
 .ordering-app .lbl-row { display: flex; justify-content: space-between; align-items: center; }
-.ordering-app .pay-opts { display: grid; gap: 8px; }
+.ordering-app .pay-opts { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .ordering-app .pay-opts label {
-  display: flex; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; font-size: .9rem;
+  display: flex; justify-content: flex-start; gap: 10px; align-items: center;
+  width: fit-content; max-width: 100%;
+  padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; font-size: .9rem;
 }
 .ordering-app .pay-opts input { accent-color: var(--primary); }
 .ordering-app .toggle-more { width: 100%; text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 11px 12px; color: var(--muted); }
@@ -370,6 +401,16 @@
 .ordering-app .fulfillment-back { display: inline-block; margin: 28px 0 10px; color: var(--muted); text-decoration: none; }
 
 @media (min-width: 640px) {
+  .ordering-app .menu-body {
+    display: grid;
+    grid-template-columns: minmax(190px, 240px) 1fr;
+    align-items: start;
+  }
+  .ordering-app .cat-nav {
+    position: sticky;
+    top: 113px;
+    padding: 18px 8px 24px 16px;
+  }
   .ordering-app .item { grid-template-columns: 220px 1fr; }
   .ordering-app .detail-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; padding-top: 16px; }
   .ordering-app .detail-wrap .gallery { padding-left: 16px; }

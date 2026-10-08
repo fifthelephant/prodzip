@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { STORE } from "@/data/order-store/config";
+import { resolveDeliveryZone } from "@/lib/order-store/area";
 import { hourLabel, money } from "@/lib/order-store/format";
 import { sendOrder } from "@/lib/order-store/order";
 import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
@@ -33,7 +34,7 @@ function CheckoutForm() {
     house: customer.house || "", landmark: customer.landmark || "", notes: ""
   }));
   const [showNotes, setShowNotes] = useState(false);
-  const [payment, setPayment] = useState<"RAZORPAY" | "COD">("RAZORPAY");
+  const payment = "RAZORPAY" as const;
   const [dayIdx, setDayIdx] = useState(0);
   const [slot, setSlot] = useState("");
   const [bad, setBad] = useState<Partial<Record<Field, boolean>>>({});
@@ -43,7 +44,9 @@ function CheckoutForm() {
   const now = nowOverride && nowOverride > shopNow ? nowOverride : shopNow;
   const fieldRefs = useRef<Partial<Record<Field, HTMLDivElement | null>>>({});
 
-  const t = totals(cart, catalog.items, fulfillmentMode);
+  const zone = resolveDeliveryZone(address, fulfillmentMode);
+  const t = totals(cart, catalog.items, fulfillmentMode, zone);
+  const showActualsNote = fulfillmentMode === "delivery" && zone === "actuals";
   const plan = useMemo(() => deliveryPlan(cart, catalog.items, now), [cart, catalog.items, now]);
   const days = useMemo(() => buildSlots(plan), [plan]);
 
@@ -70,7 +73,7 @@ function CheckoutForm() {
     const checks: Record<Field, boolean> = {
       name: v("name").length >= 2,
       email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v("email")),
-      phone: /^[6-9]\d{9}$/.test(v("phone")),
+      phone: /^\d{10}$/.test(v("phone")),
       address: fulfillmentMode === "pickup" || !!(address && address.ok),
       house: fulfillmentMode === "pickup" || v("house").length > 0
     };
@@ -119,7 +122,14 @@ function CheckoutForm() {
       try {
         const createdResponse = await fetch("/api/razorpay/order", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lines: cart, receipt: id, fulfillment: fulfillmentMode }),
+          body: JSON.stringify({
+            lines: cart,
+            receipt: id,
+            fulfillment: fulfillmentMode,
+            addressText: fulfillmentMode === "delivery" ? address?.text || "" : "",
+            zone,
+            customer: { name: c.name, email: c.email, phone: c.phone },
+          }),
         });
         const created = await createdResponse.json();
         if (!createdResponse.ok) throw new Error(created.error || "Couldn't start your payment.");
@@ -146,6 +156,7 @@ function CheckoutForm() {
           description: `Order ${id}`,
           order_id: created.orderId,
           prefill: { name: c.name, email: c.email, contact: c.phone },
+          notes: { email: c.email, phone: c.phone, name: c.name },
           modal: { ondismiss: () => setPlacing(false) },
           handler: async (result) => {
             try {
@@ -219,7 +230,7 @@ function CheckoutForm() {
     router.push(`/orders/order/?id=${encodeURIComponent(id)}`);
   }
 
-  const payLabel = placing ? "Processing…" : payment === "RAZORPAY" ? "Pay securely with Razorpay" : "Place pre-order";
+  const payLabel = placing ? "Processing…" : payment === "RAZORPAY" ? "Pay Securely" : "Place pre-order";
 
   return (
     <>
@@ -254,9 +265,9 @@ function CheckoutForm() {
           <div className="err">Please enter a valid email</div>
         </div>
         <div className={`field${bad.phone ? " bad" : ""}`} data-f="phone" ref={(el) => { fieldRefs.current.phone = el; }}>
-          <label htmlFor="phone">Mobile Number for Order Notifications <span className="req">*</span></label>
-          <div className="phone"><span>+91</span><input id="phone" type="tel" inputMode="numeric" maxLength={10} autoComplete="tel-national" value={form.phone} onChange={set("phone")} required /></div>
-          <div className="err">Please enter a 10-digit mobile number</div>
+          <label htmlFor="phone">Mobile No. <span className="req">*</span></label>
+          <div className="phone"><span>+91</span><input id="phone" type="tel" inputMode="numeric" minLength={10} maxLength={10} pattern="[0-9]{10}" autoComplete="tel-national" value={form.phone} onChange={set("phone")} required /></div>
+          <div className="err">Please enter a valid 10-digit mobile number</div>
         </div>
         {fulfillmentMode === "pickup" ? <div className="field"><span className="lbl">Pickup location</span><div className="addr-box">{STORE.pickupAddress}</div></div> : <>
         <div className={`field${bad.address ? " bad" : ""}`} data-f="address" ref={(el) => { fieldRefs.current.address = el; }}>
@@ -289,14 +300,16 @@ function CheckoutForm() {
         <div className="field">
           <span className="lbl">Payment <span className="req">*</span></span>
           <div className="pay-opts">
-            <label><input type="radio" name="pay" value="RAZORPAY" checked={payment === "RAZORPAY"} onChange={() => setPayment("RAZORPAY")} /> Pay online with Razorpay</label>
-            <label><input type="radio" name="pay" value="COD" checked={payment === "COD"} onChange={() => setPayment("COD")} /> Cash / UPI on {fulfillmentMode === "pickup" ? "pickup" : "delivery"}</label>
+            <label><input type="radio" name="pay" value="RAZORPAY" checked onChange={() => {}} /> Pay Online</label>
           </div>
         </div>
-        <Bill t={t} />
+        <Bill t={t} fulfillment={fulfillmentMode} zone={zone} />
       </form>
       <div className="sticky-foot pay-foot">
         <div className="inner">
+          {showActualsNote ? (
+            <p className="delivery-actuals-note">Delivery charges are extra and on actuals to be paid by customer</p>
+          ) : null}
           <div className="topay"><span>To Pay</span><span>{money(t.total)}</span></div>
           <button className="btn primary block" id="payNow" type="submit" form="checkoutForm" disabled={placing}>{payLabel}</button>
         </div>

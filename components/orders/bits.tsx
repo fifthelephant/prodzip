@@ -3,8 +3,9 @@
 // Small building blocks shared by several pages.
 
 import { asset, money, plain } from "@/lib/order-store/format";
+import { deliveryDisplay } from "@/lib/order-store/pricing";
 import { fmtDate, fmtDay, orderWindow, sameDay } from "@/lib/order-store/schedule";
-import type { MenuItem, Totals } from "@/lib/order-store/types";
+import type { DeliveryZone, FulfillmentMode, MenuItem, Totals } from "@/lib/order-store/types";
 
 /**
  * Photos are shown whole (not cropped), so there's space around them. Fill it
@@ -72,12 +73,12 @@ export function WhenNote({ item, now }: { item: MenuItem; now: Date }) {
   );
 }
 
-export function Bill({ t }: { t: Totals }) {
+export function Bill({ t, fulfillment = "delivery", zone = "unknown" }: { t: Totals; fulfillment?: FulfillmentMode; zone?: DeliveryZone }) {
   return (
     <div className="bill">
       <div className="row"><span>Item Sub Total</span><span>{money(t.sub)}</span></div>
-      <div className="row"><span>Delivery Charges</span><span>{t.delivery ? money(t.delivery) : "FREE"}</span></div>
-      <div className="row"><span>Taxes and Charges</span><span>{money(t.tax)}</span></div>
+      <div className="row"><span>Delivery Charges</span><span>{deliveryDisplay(t, fulfillment, zone)}</span></div>
+      <div className="row"><span>GST</span><span>{money(t.tax)}</span></div>
       <div className="row total"><span>To Pay</span><span>{money(t.total)}</span></div>
     </div>
   );

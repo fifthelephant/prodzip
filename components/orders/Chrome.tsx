@@ -59,7 +59,9 @@ export function Drawer() {
           <Link href="/orders/" onClick={() => setDrawerOpen(false)}>Menu</Link>
           <Link href="/orders/cart/" onClick={() => setDrawerOpen(false)}>Your Order</Link>
           {cats.map((c) => (
-            <a key={c.id} href="#" onClick={(e) => { e.preventDefault(); jumpTo(c.id); }}>{c.name}</a>
+            <a key={c.id} href="#" onClick={(e) => { e.preventDefault(); jumpTo(c.id); }}>
+              {c.name} <small>({c.items.filter((i) => !isRetired(i, now)).length})</small>
+            </a>
           ))}
         </nav>
         <div className="drawer-info" id="drawerInfo">

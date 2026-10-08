@@ -78,12 +78,16 @@ export interface CartLine {
   qty: number;
 }
 
+export type DeliveryZone = "gurugram" | "actuals" | "unknown";
+
 export interface Address {
   text: string;
   lat: number | null;
   lng: number | null;
   /** Inside the delivery area. */
   ok: boolean;
+  /** Gurugram is a flat fee; other NCR cities are billed on actuals. */
+  zone?: DeliveryZone;
 }
 
 export interface Customer {

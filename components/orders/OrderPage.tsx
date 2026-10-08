@@ -30,7 +30,7 @@ export default function OrderPage() {
     <div className="page done">
       <div className="tick" aria-hidden="true">✓</div>
       <h1>Pre-order received!</h1>
-      <p className="sub">Order ID <strong>{o.id}</strong><br />{o.fulfillment === "pickup" ? "Pickup" : "Delivery"} on {o.slot}</p>
+      <p className="sub">Order ID <strong>{o.id}</strong><br />{o.fulfillment === "pickup" ? "Pickup" : "Delivery"} on {o.slot}{o.customer.email ? <><br />Confirmation email: {o.customer.email}</> : null}</p>
       <div className="actions">
         <a className="btn green block" href={whatsappLink(o)} target="_blank" rel="noopener">Confirm order on WhatsApp</a>
         {o.payment === "RAZORPAY" ? <p className="upi">Payment completed securely with Razorpay.</p> : null}

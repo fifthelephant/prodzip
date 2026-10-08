@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { STORE } from "@/data/order-store/config";
 import { money } from "@/lib/order-store/format";
+import { resolveDeliveryZone } from "@/lib/order-store/area";
 import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
 import { deliveryPlan, fmtDay } from "@/lib/order-store/schedule";
 import { Bill, Loading, VegMark } from "./bits";
@@ -32,8 +33,8 @@ export default function CartPage() {
     );
   }
 
-  const t = totals(cart, catalog.items, fulfillmentMode);
-  const freeGap = STORE.freeDeliveryAbove && t.sub < STORE.freeDeliveryAbove ? STORE.freeDeliveryAbove - t.sub : 0;
+  const zone = resolveDeliveryZone(address, fulfillmentMode);
+  const t = totals(cart, catalog.items, fulfillmentMode, zone);
   const plan = deliveryPlan(cart, catalog.items, now);
 
   const proceed = () => {
@@ -67,8 +68,7 @@ export default function CartPage() {
           );
         })}
         <p><Link href="/orders/" className="link-btn">+ ADD MORE ITEMS</Link></p>
-        <Bill t={t} />
-        {fulfillmentMode === "delivery" && freeGap ? <p className="note">Add {money(freeGap)} more for FREE delivery.</p> : null}
+        <Bill t={t} fulfillment={fulfillmentMode} zone={zone} />
         {fulfillmentMode === "delivery" && t.belowMin ? <p className="note">Minimum order for delivery is {money(STORE.minOrder)}.</p> : null}
         {plan.error ? (
           <p className="notice" role="alert">{plan.error}</p>

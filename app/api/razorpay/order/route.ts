@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { STORE } from "@/data/order-store/config";
+import { detectDeliveryZone } from "@/lib/order-store/area";
 import { buildCatalog } from "@/lib/order-store/catalog";
-import { unitPrice } from "@/lib/order-store/pricing";
+import { totals, unitPrice } from "@/lib/order-store/pricing";
 import type { CartLine, InventoryRow } from "@/lib/order-store/types";
 
 export const runtime = "nodejs";
@@ -13,9 +14,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Online payment is not configured yet." }, { status: 503 });
   }
 
-  const body = await request.json().catch(() => null) as { lines?: CartLine[]; receipt?: string; fulfillment?: "delivery" | "pickup" } | null;
+  const body = await request.json().catch(() => null) as {
+    lines?: CartLine[];
+    receipt?: string;
+    fulfillment?: "delivery" | "pickup";
+    addressText?: string;
+    zone?: "gurugram" | "actuals" | "unknown";
+    customer?: { name?: string; email?: string; phone?: string };
+  } | null;
   if (!body || !Array.isArray(body.lines) || !body.lines.length || body.lines.length > 40 || !body.receipt || !/^[A-Za-z0-9_-]{1,40}$/.test(body.receipt)) {
     return NextResponse.json({ error: "Invalid order details." }, { status: 400 });
+  }
+  const customerEmail = typeof body.customer?.email === "string" ? body.customer.email.trim() : "";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    return NextResponse.json({ error: "Please enter a valid email so we can send your order details." }, { status: 400 });
   }
 
   let inventory: InventoryRow[] | null = null;
@@ -51,8 +63,12 @@ export async function POST(request: Request) {
 
   const fulfillment = body.fulfillment === "pickup" ? "pickup" : "delivery";
   if (fulfillment === "delivery" && subtotal < STORE.minOrder) return NextResponse.json({ error: `The minimum order is ₹${STORE.minOrder}.` }, { status: 400 });
-  const delivery = fulfillment === "delivery" && !(STORE.freeDeliveryAbove && subtotal >= STORE.freeDeliveryAbove) ? STORE.deliveryFee : 0;
-  const amount = Math.round((subtotal + delivery + Math.round(subtotal * STORE.taxRate)) * 100);
+  const zoneFromText = detectDeliveryZone(null, body.addressText || "");
+  const zone = fulfillment === "delivery"
+    ? (zoneFromText !== "unknown" ? zoneFromText : body.zone === "gurugram" || body.zone === "actuals" ? body.zone : "unknown")
+    : "unknown";
+  const priced = totals(body.lines, items, fulfillment, zone);
+  const amount = Math.round(priced.total * 100);
 
   const response = await fetch("https://api.razorpay.com/v1/orders", {
     method: "POST",
@@ -60,7 +76,16 @@ export async function POST(request: Request) {
       Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ amount, currency: "INR", receipt: body.receipt }),
+    body: JSON.stringify({
+      amount,
+      currency: "INR",
+      receipt: body.receipt,
+      notes: {
+        email: customerEmail,
+        name: typeof body.customer?.name === "string" ? body.customer.name.trim() : "",
+        phone: typeof body.customer?.phone === "string" ? body.customer.phone.trim() : "",
+      },
+    }),
     cache: "no-store",
   });
   const result = await response.json().catch(() => null);

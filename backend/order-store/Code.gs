@@ -77,6 +77,7 @@ function doPost(e) {
     });
 
     appendOrder_(order);
+    emailCustomer_(order);
     return json_({ ok: true });
   } catch (err) {
     return json_({ ok: false, error: "Bad request" });
@@ -181,6 +182,39 @@ function safe_(v) {
 function num_(v) {
   const n = Number(v);
   return isFinite(n) ? n : "";
+}
+
+function emailCustomer_(o) {
+  const email = o.customer && String(o.customer.email || "").trim();
+  if (!email || email.indexOf("@") < 1) return;
+  const t = o.totals || {};
+  const items = (o.items || []).map(function (i) {
+    return i.qty + " × " + i.name + (i.options ? " (" + i.options + ")" : "");
+  }).join("\n");
+  const delivery = o.fulfillment === "pickup" ? "Not applicable" : (t.delivery ? "₹" + t.delivery : "On actuals");
+  try {
+    MailApp.sendEmail({
+      to: email.slice(0, 200),
+      subject: "Marwadi Khana order " + safe_(o.id),
+      body: [
+        "Thank you for your order with Marwadi Khana.",
+        "",
+        "Order ID: " + o.id,
+        (o.fulfillment === "pickup" ? "Pickup" : "Delivery") + ": " + o.slot,
+        "",
+        items,
+        "",
+        "Item total: ₹" + t.sub,
+        "Delivery: " + delivery,
+        "GST: ₹" + t.tax,
+        "To pay: ₹" + t.total,
+        "",
+        "We will contact you on " + ((o.customer && o.customer.phone) || "your mobile") + " for updates."
+      ].join("\n")
+    });
+  } catch (err) {
+    // Recording the order matters more than the confirmation email.
+  }
 }
 
 function json_(obj) {

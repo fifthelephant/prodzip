@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap } from "leaflet";
 import { STORE } from "@/data/order-store/config";
-import { inServiceArea, inServiceBox } from "@/lib/order-store/area";
+import { detectDeliveryZone, inServiceArea, inServiceBox } from "@/lib/order-store/area";
 import type { Address } from "@/lib/order-store/types";
 import { useShop } from "./ShopProvider";
 
@@ -39,7 +39,7 @@ function AddressPicker() {
   // Without a map, the typed text is the address.
   const typed = query.trim();
   const pending: Address | null = mapFailed
-    ? (typed.length > 8 ? { text: typed, lat: null, lng: null, ok: inServiceArea(null, typed) } : null)
+    ? (typed.length > 8 ? { text: typed, lat: null, lng: null, ok: inServiceArea(null, typed), zone: detectDeliveryZone(null, typed) } : null)
     : picked;
 
   const notDelivering = useCallback(() => {
@@ -55,9 +55,10 @@ function AddressPicker() {
         headers: { "Accept-Language": "en" }
       });
       const j = await r.json();
-      p = { text: j.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng, ok: inServiceArea(j.address || {}, "") };
+      const text = j.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      p = { text, lat, lng, ok: inServiceArea(j.address || {}, ""), zone: detectDeliveryZone(j.address || {}, text) };
     } catch {
-      p = { text: `Pinned location (${lat.toFixed(5)}, ${lng.toFixed(5)})`, lat, lng, ok: inServiceBox(lat, lng) };
+      p = { text: `Pinned location (${lat.toFixed(5)}, ${lng.toFixed(5)})`, lat, lng, ok: inServiceBox(lat, lng), zone: "unknown" };
     }
     if (seq !== revSeq.current) return; // a newer map move has started
     setFinding(false);

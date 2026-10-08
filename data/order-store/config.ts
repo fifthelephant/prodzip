@@ -26,8 +26,8 @@ export const STORE: StoreConfig = {
 
   // Charges
   minOrder: 299,            // minimum item total for delivery
-  deliveryFee: 80,          // flat delivery fee
-  freeDeliveryAbove: 1499,  // item total at which delivery is free (0 = never)
+  deliveryFee: 150,         // flat delivery fee for Gurugram only
+  freeDeliveryAbove: 0,     // other NCR cities are billed on actuals, not waived
   taxRate: 0.05,            // 5% GST on items
 
   // Promo banner at the top of the menu. Set to null to hide.

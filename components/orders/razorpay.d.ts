@@ -10,6 +10,7 @@ declare global {
       description: string;
       order_id: string;
       prefill: { name: string; email: string; contact: string };
+      notes?: { email?: string; phone?: string; name?: string };
       handler: (result: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => void | Promise<void>;
       modal: { ondismiss: () => void };
     }) => { open: () => void; on: (event: string, callback: (error: { description?: string }) => void) => void };
