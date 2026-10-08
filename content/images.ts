@@ -14,7 +14,7 @@
  */
 export const images = {
   logo: "/images/brand/logo.png",
-  hero: "/images/hero.jpg",
+  hero: "/images/hero-catering.jpg",
   founder: "/images/founder.png",
   about: "/images/gallery/gujiya.jpg",
   occasions: {
