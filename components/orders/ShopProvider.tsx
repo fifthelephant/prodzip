@@ -14,7 +14,7 @@ import { fetchInventory, newOrderId } from "@/lib/order-store/order";
 import { lineKey } from "@/lib/order-store/pricing";
 import { blockedLabel, isRetired } from "@/lib/order-store/schedule";
 import { load, save } from "@/lib/order-store/storage";
-import type { Address, CartLine, Customer, InventoryRow } from "@/lib/order-store/types";
+import type { Address, CartLine, Customer, FulfillmentMode, InventoryRow } from "@/lib/order-store/types";
 
 export { NO_FILTERS, type Filters };
 
@@ -37,6 +37,8 @@ interface ShopContext {
   clearCart: () => void;
   address: Address | null;
   setAddress: (a: Address) => void;
+  fulfillmentMode: FulfillmentMode;
+  setFulfillmentMode: (mode: FulfillmentMode) => void;
   customer: Customer;
   setCustomer: (c: Customer) => void;
   cartNotice: string;
@@ -96,6 +98,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const [catalog, setCatalog] = useState<Catalog>(EMPTY_CATALOG);
   const [cart, setCartState] = useState<CartLine[]>([]);
   const [address, setAddressState] = useState<Address | null>(null);
+  const [fulfillmentMode, setFulfillmentModeState] = useState<FulfillmentMode>("delivery");
   const [customer, setCustomerState] = useState<Customer>({});
   const [cartNotice, setCartNotice] = useState("");
   const [bump, setBump] = useState(0);
@@ -185,6 +188,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     cartRef.current = load<CartLine[]>("cart", []);
     setCartState(cartRef.current);
     setAddressState(load<Address | null>("address", null));
+    setFulfillmentModeState(load<FulfillmentMode>("fulfillment", "delivery"));
     setCustomerState(load<Customer>("customer", {}));
     loadedRef.current = true;
 
@@ -276,6 +280,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const clearCart = useCallback(() => commitCart([]), [commitCart]);
 
   const setAddress = useCallback((a: Address) => { setAddressState(a); save("address", a); }, []);
+  const setFulfillmentMode = useCallback((mode: FulfillmentMode) => { setFulfillmentModeState(mode); save("fulfillment", mode); }, []);
   const setCustomer = useCallback((c: Customer) => { setCustomerState(c); save("customer", c); }, []);
 
   const openAddress = useCallback((onDone?: () => void) => {
@@ -319,13 +324,13 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     ready, inventoryFailed, retryInventory, now, catalog, cart,
     cartCount: cart.reduce((a, l) => a + l.qty, 0), bump,
     qtyOf: (id) => qtyOfItem(cart, id), roomFor, addToCart, setQty, clearCart,
-    address, setAddress, customer, setCustomer, cartNotice, setCartNotice,
+    address, setAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, setCartNotice,
     applyInventory, refreshInventory, toast, toastState,
     addressOpen, openAddress, closeAddress, drawerOpen, setDrawerOpen,
     filters, setFilters, searchText, setSearchText, collapsed, setCollapsed, showSearch, setShowSearch, showFilters, setShowFilters,
     getMenuScroll, saveMenuScroll, takePendingJump, jumpTick, jumpTo, checkoutOrderId, resetCheckoutOrderId
   }), [ready, inventoryFailed, retryInventory, now, catalog, cart, bump, roomFor, addToCart, setQty, clearCart,
-    address, setAddress, customer, setCustomer, cartNotice, applyInventory, refreshInventory, toast, toastState,
+    address, setAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, applyInventory, refreshInventory, toast, toastState,
     addressOpen, openAddress, closeAddress, drawerOpen, setDrawerOpen, filters, searchText, collapsed, showSearch, showFilters,
     getMenuScroll, saveMenuScroll, takePendingJump, jumpTick, jumpTo, checkoutOrderId, resetCheckoutOrderId]);
 

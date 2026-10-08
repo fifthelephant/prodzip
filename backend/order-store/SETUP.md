@@ -69,7 +69,7 @@ Done 🎉
 - **Add an item:** add a new row. Items with sizes or add-ons (like weights) also need an entry with the same `id` in `data/menu.ts`. Items without one are sold as a single unit and don't get their own item page.
 - **Remove an item completely:** delete its row.
 - **Stock is counted per item, not per size:** an order of 2 × 500 g and 1 × 1 kg Kaju Katli uses 3 from Kaju Katli's stock.
-- **Orders tab:** each order is a new row with status *New*. You can change the status yourself (*Confirmed*, *Delivered*…). The website doesn't read this tab.
+- **Orders tab:** each order is a new row with status *New* and a **Fulfillment** value of *delivery* or *pickup*. You can change the status yourself (*Confirmed*, *Delivered*…). The website doesn't read this tab. On the next order, existing tabs get a Fulfillment column appended without moving existing columns.
 
 ## Changing the script later
 

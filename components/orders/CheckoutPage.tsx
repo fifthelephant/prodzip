@@ -24,7 +24,7 @@ export default function CheckoutPage() {
 function CheckoutForm() {
   const shop = useShop();
   const { cart, catalog, now: shopNow, address, openAddress, customer, setCustomer,
-    toast, applyInventory, setCartNotice, clearCart, refreshInventory, checkoutOrderId, resetCheckoutOrderId } = shop;
+    fulfillmentMode, toast, applyInventory, setCartNotice, clearCart, refreshInventory, checkoutOrderId, resetCheckoutOrderId } = shop;
   const router = useRouter();
 
   // Starts from the details saved last time.
@@ -43,7 +43,7 @@ function CheckoutForm() {
   const now = nowOverride && nowOverride > shopNow ? nowOverride : shopNow;
   const fieldRefs = useRef<Partial<Record<Field, HTMLDivElement | null>>>({});
 
-  const t = totals(cart, catalog.items);
+  const t = totals(cart, catalog.items, fulfillmentMode);
   const plan = useMemo(() => deliveryPlan(cart, catalog.items, now), [cart, catalog.items, now]);
   const days = useMemo(() => buildSlots(plan), [plan]);
 
@@ -71,8 +71,8 @@ function CheckoutForm() {
       name: v("name").length >= 2,
       email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v("email")),
       phone: /^[6-9]\d{9}$/.test(v("phone")),
-      address: !!(address && address.ok),
-      house: v("house").length > 0
+      address: fulfillmentMode === "pickup" || !!(address && address.ok),
+      house: fulfillmentMode === "pickup" || v("house").length > 0
     };
     const badNow = Object.fromEntries(Object.entries(checks).map(([k, ok]) => [k, !ok])) as Record<Field, boolean>;
     setBad(badNow);
@@ -101,8 +101,11 @@ function CheckoutForm() {
       placedAt: new Date().toISOString(),
       slot: `${chosen.label}, ${slotV}`,
       payment,
+      fulfillment: fulfillmentMode,
       customer: { name: c.name, email: c.email, phone: "+91" + c.phone },
-      address: { line: c.house, landmark: c.landmark, map: address!.text, lat: address!.lat, lng: address!.lng },
+      address: fulfillmentMode === "pickup"
+        ? { line: STORE.pickupAddress, map: "", lat: null, lng: null }
+        : { line: c.house, landmark: c.landmark, map: address!.text, lat: address!.lat, lng: address!.lng },
       items: cart.map((l) => {
         const item = catalog.items[l.id];
         return { id: item.id, name: item.name, options: selLabel(item, l.sel), qty: l.qty, price: unitPrice(item, l.sel) * l.qty };
@@ -116,7 +119,7 @@ function CheckoutForm() {
       try {
         const createdResponse = await fetch("/api/razorpay/order", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lines: cart, receipt: id }),
+          body: JSON.stringify({ lines: cart, receipt: id, fulfillment: fulfillmentMode }),
         });
         const created = await createdResponse.json();
         if (!createdResponse.ok) throw new Error(created.error || "Couldn't start your payment.");
@@ -222,12 +225,12 @@ function CheckoutForm() {
     <>
       <form className="page" id="checkoutForm" noValidate onSubmit={submit}>
         <div className="field">
-          <span className="lbl">Delivery Date &amp; Slot <span className="req">*</span></span>
+          <span className="lbl">{fulfillmentMode === "pickup" ? "Pickup Date & Slot" : "Delivery Date & Slot"} <span className="req">*</span></span>
           {plan.fixed ? (
-            <p className="hint thali-hint">🍱 Your Navratri thali is delivered on <b>{fmtDay(plan.fixed)}</b>. Pick a time slot.</p>
+              <p className="hint thali-hint">🍱 Your Navratri thali is available for {fulfillmentMode === "pickup" ? "pickup" : "delivery"} on <b>{fmtDay(plan.fixed)}</b>. Pick a time slot.</p>
           ) : (
             <p className="hint">
-              Pre-orders placed before {hourLabel(STORE.orderCutoffHour)} can be delivered {STORE.preorderMinDays === 1 ? "the next day" : `in ${STORE.preorderMinDays} days`}.
+              Pre-orders placed before {hourLabel(STORE.orderCutoffHour)} can be {fulfillmentMode === "pickup" ? "picked up" : "delivered"} {STORE.preorderMinDays === 1 ? "the next day" : `in ${STORE.preorderMinDays} days`}.
               {pastCutoff(now) ? ` Today's ${hourLabel(STORE.orderCutoffHour)} cut-off has passed, so the earliest date is one day later.` : ""}
             </p>
           )}
@@ -255,6 +258,7 @@ function CheckoutForm() {
           <div className="phone"><span>+91</span><input id="phone" type="tel" inputMode="numeric" maxLength={10} autoComplete="tel-national" value={form.phone} onChange={set("phone")} required /></div>
           <div className="err">Please enter a 10-digit mobile number</div>
         </div>
+        {fulfillmentMode === "pickup" ? <div className="field"><span className="lbl">Pickup location</span><div className="addr-box">{STORE.pickupAddress}</div></div> : <>
         <div className={`field${bad.address ? " bad" : ""}`} data-f="address" ref={(el) => { fieldRefs.current.address = el; }}>
           <div className="lbl-row">
             <span className="lbl">Delivering to <span className="req">*</span> <small>(as on map)</small></span>
@@ -274,6 +278,7 @@ function CheckoutForm() {
           <label htmlFor="landmark">Nearest Landmark <small>(optional)</small></label>
           <input id="landmark" value={form.landmark} onChange={set("landmark")} />
         </div>
+        </>}
         <div className="field">
           {showNotes ? (
             <textarea id="notes" rows={3} placeholder="Message on box, sugar preference, gate code…" value={form.notes} onChange={set("notes")} autoFocus />
@@ -285,7 +290,7 @@ function CheckoutForm() {
           <span className="lbl">Payment <span className="req">*</span></span>
           <div className="pay-opts">
             <label><input type="radio" name="pay" value="RAZORPAY" checked={payment === "RAZORPAY"} onChange={() => setPayment("RAZORPAY")} /> Pay online with Razorpay</label>
-            <label><input type="radio" name="pay" value="COD" checked={payment === "COD"} onChange={() => setPayment("COD")} /> Cash / UPI on delivery</label>
+            <label><input type="radio" name="pay" value="COD" checked={payment === "COD"} onChange={() => setPayment("COD")} /> Cash / UPI on {fulfillmentMode === "pickup" ? "pickup" : "delivery"}</label>
           </div>
         </div>
         <Bill t={t} />

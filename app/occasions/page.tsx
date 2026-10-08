@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { OccasionGrid } from "@/components/Sections";
+import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Occasions",
+  title: "Catering",
   description:
     "Marwadi Khana caters griha pravesh, pooja and havan, baby celebrations, prayer meetings and family gatherings.",
 };
@@ -11,7 +12,7 @@ export default function OccasionsPage() {
   return (
     <>
       <section className="page-hero">
-        <p className="eyebrow">Occasions We Cater To</p>
+        <p className="eyebrow">Catering</p>
         <h1>Food for the gatherings that matter</h1>
         <p className="lede">
           Home-style vegetarian menus for poojas, new homes, baby celebrations, prayer meetings and
@@ -19,6 +20,7 @@ export default function OccasionsPage() {
         </p>
       </section>
       <OccasionGrid />
+      <section className="section center-link"><Link href="/quote" className="btn btn-gold">Get a Quote</Link></section>
     </>
   );
 }

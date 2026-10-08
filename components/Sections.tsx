@@ -9,7 +9,7 @@ export function OccasionGrid() {
   return (
     <section className="section">
       <div className="section-head">
-        <p className="eyebrow">Occasions We Cater To</p>
+        <p className="eyebrow">Catering for Every Occasion</p>
         <h2>Gatherings that deserve a thoughtful table</h2>
       </div>
       <div className="occasion-grid">

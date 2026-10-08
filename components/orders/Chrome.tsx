@@ -29,7 +29,7 @@ export function TopBar() {
       >
         {isMenu ? <MenuIcon /> : <BackIcon />}
       </button>
-      <Link href="/website" className="brand" id="brand" aria-label="Back to the Marwadi Khana catering website">{STORE.name}</Link>
+      <Link href="/" className="brand" id="brand" aria-label="Back to the Marwadi Khana catering website">{STORE.name}</Link>
       <Link href="/orders/cart/" className={`icon-btn cart-btn${bump ? " bump" : ""}`} aria-label="Cart">
         <CartIcon />
         <span className="badge" id="cartCount" key={bump} hidden={cartCount === 0}>{cartCount}</span>
@@ -54,7 +54,8 @@ export function Drawer() {
         <button className="icon-btn drawer-close" aria-label="Close" onClick={() => setDrawerOpen(false)}>✕</button>
         <div className="drawer-brand" id="drawerBrand">{STORE.name}<small>{STORE.tagline}</small></div>
         <nav className="drawer-links">
-          <Link href="/website" onClick={() => setDrawerOpen(false)}>← Catering website</Link>
+          <Link href="/" onClick={() => setDrawerOpen(false)}>← Catering website</Link>
+          <Link href="/orders/start/" onClick={() => setDrawerOpen(false)}>Change delivery / pickup</Link>
           <Link href="/orders/" onClick={() => setDrawerOpen(false)}>Menu</Link>
           <Link href="/orders/cart/" onClick={() => setDrawerOpen(false)}>Your Order</Link>
           {cats.map((c) => (
@@ -62,7 +63,7 @@ export function Drawer() {
           ))}
         </nav>
         <div className="drawer-info" id="drawerInfo">
-          <p>🛵 Pre-orders only · home delivery across Delhi NCR &amp; Gurgaon</p>
+          <p>🛵 Pre-orders · delivery and pickup / takeaway</p>
           <p>🕘 Delivery slots from {hourLabel(STORE.openHour)} · order by {hourLabel(STORE.orderCutoffHour)} for next-day delivery</p>
           <p>📞 <a href={`tel:${STORE.phone.replace(/\s/g, "")}`}>{STORE.phone}</a></p>
           <p>💬 <a href={`https://wa.me/${STORE.whatsappNumber}`} target="_blank" rel="noopener">Chat on WhatsApp</a></p>

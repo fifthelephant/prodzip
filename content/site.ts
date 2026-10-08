@@ -46,10 +46,10 @@ export const site = {
 } as const;
 
 export const nav = [
-  { href: "/website", label: "Home" },
+  { href: "/", label: "Home" },
   { href: "/about", label: "About Us" },
   { href: "/menu", label: "Menu" },
-  { href: "/occasions", label: "Occasions" },
+  { href: "/occasions", label: "Catering" },
   { href: "/our-promise", label: "Our Promise" },
   { href: "/faq", label: "FAQs" },
 ] as const;

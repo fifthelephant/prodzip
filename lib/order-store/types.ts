@@ -102,11 +102,14 @@ export interface Totals {
   belowMin: boolean;
 }
 
+export type FulfillmentMode = "delivery" | "pickup";
+
 export interface Order {
   id: string;
   placedAt: string;
   slot: string;
   payment: "RAZORPAY" | "UPI" | "COD";
+  fulfillment: FulfillmentMode;
   customer: { name: string; email: string; phone: string };
   address: { line: string; landmark?: string; map: string; lat: number | null; lng: number | null };
   items: { id: string; name: string; options: string; qty: number; price: number }[];
@@ -118,6 +121,7 @@ export interface StoreConfig {
   name: string;
   tagline: string;
   city: string;
+  pickupAddress: string;
   currency: string;
   whatsappNumber: string;
   phone: string;

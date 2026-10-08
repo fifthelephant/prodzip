@@ -356,6 +356,19 @@
 
 .ordering-app .site-foot { text-align: center; color: var(--muted); font-size: .78rem; padding: 30px 16px 100px; line-height: 1.6; }
 
+/* Service selection before the menu */
+.ordering-app .fulfillment-page { max-width: 900px; margin: 0 auto; padding-top: clamp(38px, 8vh, 88px); text-align: center; }
+.ordering-app .fulfillment-kicker { color: var(--saffron); font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.ordering-app .fulfillment-page h1 { font-family: var(--display); font-size: clamp(1.8rem, 5vw, 2.7rem); line-height: 1.15; }
+.ordering-app .fulfillment-intro { max-width: 540px; margin: 12px auto 28px; color: var(--muted); line-height: 1.6; }
+.ordering-app .fulfillment-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; text-align: left; }
+.ordering-app .fulfillment-card { display: flex; flex-direction: column; padding: clamp(20px, 4vw, 32px); border: 1px solid var(--line); border-radius: 16px; background: var(--card); box-shadow: var(--shadow); }
+.ordering-app .fulfillment-icon { font-size: 2.1rem; }
+.ordering-app .fulfillment-card h2 { margin: 14px 0 6px; font-family: var(--display); font-size: 1.4rem; }
+.ordering-app .fulfillment-card p { flex: 1; min-height: 48px; color: var(--muted); font-size: .9rem; line-height: 1.55; }
+.ordering-app .fulfillment-card .btn { margin-top: 18px; }
+.ordering-app .fulfillment-back { display: inline-block; margin: 28px 0 10px; color: var(--muted); text-decoration: none; }
+
 @media (min-width: 640px) {
   .ordering-app .item { grid-template-columns: 220px 1fr; }
   .ordering-app .detail-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; padding-top: 16px; }
@@ -369,6 +382,8 @@
   .ordering-app .thumb { width: 100%; aspect-ratio: 4 / 3; min-height: 0; }
   .ordering-app .thumb img { object-fit: cover; padding: 0; }
   .ordering-app .info { padding: 14px 16px 14px; }
+  .ordering-app .fulfillment-options { grid-template-columns: 1fr; }
+  .ordering-app .fulfillment-card { padding: 22px; }
 }
 .ordering-app .veg-mark.inline { display: inline-grid; vertical-align: -2px; margin: 0 4px 0 0; }
 

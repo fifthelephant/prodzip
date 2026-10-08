@@ -6,19 +6,19 @@ import type { InventoryRow, Order } from "./types";
 export function whatsappText(o: Order): string {
   const lines = [
     `*New pre-order ${o.id}* — ${STORE.name}`,
-    `Delivery on ${o.slot}`,
+    `${o.fulfillment === "pickup" ? "Pickup" : "Delivery"} on ${o.slot}`,
     "",
     ...o.items.map((i) => `• ${i.qty} × ${i.name}${i.options ? ` (${i.options})` : ""} — ${money(i.price)}`),
     "",
     `Sub total: ${money(o.totals.sub)}`,
-    `Delivery: ${o.totals.delivery ? money(o.totals.delivery) : "FREE"}`,
+    `Delivery: ${o.fulfillment === "pickup" ? "Not applicable" : o.totals.delivery ? money(o.totals.delivery) : "FREE"}`,
     `Taxes: ${money(o.totals.tax)}`,
-    `*To pay: ${money(o.totals.total)}* (${o.payment === "RAZORPAY" ? "Razorpay · paid online" : o.payment === "UPI" ? "UPI" : "Cash/UPI on delivery"})`,
+    `*To pay: ${money(o.totals.total)}* (${o.payment === "RAZORPAY" ? "Razorpay · paid online" : o.payment === "UPI" ? "UPI" : `Cash/UPI on ${o.fulfillment === "pickup" ? "pickup" : "delivery"}`})`,
     "",
     `Name: ${o.customer.name}`,
     `Phone: ${o.customer.phone}`,
     `Email: ${o.customer.email}`,
-    `Address: ${o.address.line}, ${o.address.map}`
+    `${o.fulfillment === "pickup" ? "Pickup location" : "Address"}: ${o.address.line}${o.address.map ? `, ${o.address.map}` : ""}`
   ];
   if (o.address.landmark) lines.push(`Landmark: ${o.address.landmark}`);
   if (o.address.lat != null) lines.push(`Map: https://maps.google.com/?q=${o.address.lat},${o.address.lng}`);

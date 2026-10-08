@@ -1,5 +1,5 @@
 import { STORE } from "@/data/order-store/config";
-import type { CartLine, MenuItem, Totals } from "./types";
+import type { CartLine, FulfillmentMode, MenuItem, Totals } from "./types";
 
 /**
  * A choice can scale the base price (factor: 0.5 = half a kg) and/or add a
@@ -46,9 +46,9 @@ export function selLabel(item: MenuItem, sel: number[][]): string {
 
 export const lineKey = (id: string, sel: number[][]) => id + "|" + JSON.stringify(sel);
 
-export function totals(cart: CartLine[], items: Record<string, MenuItem>): Totals {
+export function totals(cart: CartLine[], items: Record<string, MenuItem>, fulfillment: FulfillmentMode = "delivery"): Totals {
   const sub = cart.reduce((a, l) => (items[l.id] ? a + unitPrice(items[l.id], l.sel) * l.qty : a), 0);
-  const delivery = sub > 0 && !(STORE.freeDeliveryAbove && sub >= STORE.freeDeliveryAbove) ? STORE.deliveryFee : 0;
+  const delivery = fulfillment === "delivery" && sub > 0 && !(STORE.freeDeliveryAbove && sub >= STORE.freeDeliveryAbove) ? STORE.deliveryFee : 0;
   const tax = Math.round(sub * STORE.taxRate);
-  return { sub, delivery, tax, total: sub + delivery + tax, belowMin: sub < STORE.minOrder };
+  return { sub, delivery, tax, total: sub + delivery + tax, belowMin: fulfillment === "delivery" && sub < STORE.minOrder };
 }

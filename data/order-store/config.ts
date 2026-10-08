@@ -13,6 +13,7 @@ export const STORE: StoreConfig = {
   name: "Marwadi Khana",
   tagline: "Asli Marwadi mithai, ghee mein bani · pre-orders only",
   city: "Delhi NCR",
+  pickupAddress: "House No 106, Indira Colony Part-1, Sector-52, Gurugram - 122003",
   currency: "₹",
 
   // Orders are sent to this WhatsApp number (country code + number, digits only).

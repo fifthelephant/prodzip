@@ -17,7 +17,7 @@ const sans = Outfit({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("http://localhost:3001"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: {
     default: `${site.name} | Royal Rajasthani Vegetarian Catering`,
     template: `%s | ${site.name}`,

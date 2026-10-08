@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Online payment is not configured yet." }, { status: 503 });
   }
 
-  const body = await request.json().catch(() => null) as { lines?: CartLine[]; receipt?: string } | null;
+  const body = await request.json().catch(() => null) as { lines?: CartLine[]; receipt?: string; fulfillment?: "delivery" | "pickup" } | null;
   if (!body || !Array.isArray(body.lines) || !body.lines.length || body.lines.length > 40 || !body.receipt || !/^[A-Za-z0-9_-]{1,40}$/.test(body.receipt)) {
     return NextResponse.json({ error: "Invalid order details." }, { status: 400 });
   }
@@ -49,8 +49,9 @@ export async function POST(request: Request) {
     subtotal += unitPrice(item, line.sel) * line.qty;
   }
 
-  if (subtotal < STORE.minOrder) return NextResponse.json({ error: `The minimum order is ₹${STORE.minOrder}.` }, { status: 400 });
-  const delivery = STORE.freeDeliveryAbove && subtotal >= STORE.freeDeliveryAbove ? 0 : STORE.deliveryFee;
+  const fulfillment = body.fulfillment === "pickup" ? "pickup" : "delivery";
+  if (fulfillment === "delivery" && subtotal < STORE.minOrder) return NextResponse.json({ error: `The minimum order is ₹${STORE.minOrder}.` }, { status: 400 });
+  const delivery = fulfillment === "delivery" && !(STORE.freeDeliveryAbove && subtotal >= STORE.freeDeliveryAbove) ? STORE.deliveryFee : 0;
   const amount = Math.round((subtotal + delivery + Math.round(subtotal * STORE.taxRate)) * 100);
 
   const response = await fetch("https://api.razorpay.com/v1/orders", {

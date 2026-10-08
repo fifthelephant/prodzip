@@ -14,7 +14,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { slug } = await params;
   const occasion = getOccasion(slug);
-  if (!occasion) return { title: "Occasion" };
+  if (!occasion) return { title: "Catering" };
   return { title: occasion.title, description: occasion.summary };
 }
 
@@ -27,7 +27,7 @@ export default async function OccasionPage({ params }: { params: Promise<Params>
     <>
       <section className="page-hero">
         <p className="eyebrow">
-          <Link href="/occasions">Occasions</Link>
+          <Link href="/occasions">Catering</Link>
         </p>
         <h1>{occasion.title}</h1>
         <p className="lede">{occasion.summary}</p>
@@ -51,7 +51,7 @@ export default async function OccasionPage({ params }: { params: Promise<Params>
           </ul>
           <div className="button-row">
             <Link href="/quote" className="btn btn-gold">
-              Request a Quote
+              Get a Quote
             </Link>
             <Link href="/menu" className="btn btn-line">
               Browse the Menu

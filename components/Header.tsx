@@ -12,14 +12,14 @@ export function Header() {
   const [open, setOpen] = useState(false);
 
   function isActive(href: string) {
-    if (href === "/website") return pathname === "/website";
+    if (href === "/") return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Link href="/website" className="brand" onClick={() => setOpen(false)}>
+        <Link href="/" className="brand" onClick={() => setOpen(false)}>
           <SiteLogo />
           <span className="tagline">{site.tagline}</span>
         </Link>
@@ -46,8 +46,8 @@ export function Header() {
               {item.label}
             </Link>
           ))}
-          <Link href="/quote" className="btn btn-gold" onClick={() => setOpen(false)}>
-            Get a Quote
+          <Link href="/orders/start/" className="btn btn-gold" onClick={() => setOpen(false)}>
+            Order Now
           </Link>
         </nav>
       </div>

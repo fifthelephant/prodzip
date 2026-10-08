@@ -30,7 +30,7 @@ export default function OrderPage() {
     <div className="page done">
       <div className="tick" aria-hidden="true">✓</div>
       <h1>Pre-order received!</h1>
-      <p className="sub">Order ID <strong>{o.id}</strong><br />Delivery on {o.slot}</p>
+      <p className="sub">Order ID <strong>{o.id}</strong><br />{o.fulfillment === "pickup" ? "Pickup" : "Delivery"} on {o.slot}</p>
       <div className="actions">
         <a className="btn green block" href={whatsappLink(o)} target="_blank" rel="noopener">Confirm order on WhatsApp</a>
         {o.payment === "RAZORPAY" ? <p className="upi">Payment completed securely with Razorpay.</p> : null}
@@ -50,7 +50,7 @@ export default function OrderPage() {
           </div>
         ))}
         <div className="bill"><div className="row total"><span>Total</span><span>{money(o.totals.total)}</span></div></div>
-        <p className="sub" style={{ marginTop: 12 }}>📍 {o.address.line}, {o.address.map}</p>
+      <p className="sub" style={{ marginTop: 12 }}>📍 {o.fulfillment === "pickup" ? "Pickup at " : "Deliver to "}{o.address.line}{o.address.map ? `, ${o.address.map}` : ""}</p>
       </div>
       <Link className="btn ghost block" href="/orders/">Back to menu</Link>
     </div>

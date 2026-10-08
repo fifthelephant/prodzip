@@ -15,7 +15,7 @@ const ORDERS_TAB = "Orders";
 const INVENTORY_HEADERS = ["id", "name", "category", "description", "price", "stock", "available", "badge", "image", "shelf_life"];
 const ORDER_HEADERS = [
   "Placed at", "Order ID", "Status", "Delivery slot", "Name", "Phone", "Email",
-  "Address", "Landmark", "Map link", "Items", "Item total", "Delivery", "Tax", "To pay", "Payment", "Notes"
+  "Address", "Landmark", "Map link", "Items", "Item total", "Delivery", "Tax", "To pay", "Payment", "Notes", "Fulfillment"
 ];
 const MAX_QTY_PER_ITEM = 50; // refuse obviously bogus orders
 
@@ -147,6 +147,13 @@ function appendOrder_(o) {
     sheet = SpreadsheetApp.getActive().insertSheet(ORDERS_TAB);
     sheet.appendRow(ORDER_HEADERS);
     sheet.setFrozenRows(1);
+  } else {
+    // Existing Orders tabs predate the pickup / takeaway choice. Add the new
+    // column at the end so existing data and manually added columns stay put.
+    const headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+    if (headers.indexOf("Fulfillment") === -1) {
+      sheet.getRange(1, headers.length + 1).setValue("Fulfillment");
+    }
   }
   const c = o.customer || {};
   const a = o.address || {};
@@ -154,13 +161,16 @@ function appendOrder_(o) {
   const items = o.items.map(function (i) {
     return i.qty + " × " + i.name + (i.options ? " (" + i.options + ")" : "");
   }).join("\n");
-  sheet.appendRow([
+  const row = [
     new Date(),
     safe_(o.id), "New", safe_(o.slot), safe_(c.name), safe_(c.phone), safe_(c.email),
     safe_([a.line, a.map].filter(String).join(", ")), safe_(a.landmark),
     a.lat != null ? "https://maps.google.com/?q=" + Number(a.lat) + "," + Number(a.lng) : "",
     safe_(items), num_(t.sub), num_(t.delivery), num_(t.tax), num_(t.total), safe_(o.payment), safe_(o.notes)
-  ]);
+  ];
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  row[headers.indexOf("Fulfillment")] = safe_(o.fulfillment || "delivery");
+  sheet.appendRow(row);
 }
 
 // Customer text must never be treated as a spreadsheet formula.

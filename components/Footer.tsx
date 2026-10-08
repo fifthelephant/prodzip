@@ -26,7 +26,7 @@ export function Footer() {
           <ul>
             <li><Link href="/about">About Us</Link></li>
             <li><Link href="/menu">Menu</Link></li>
-            <li><Link href="/occasions">Occasions</Link></li>
+            <li><Link href="/occasions">Catering</Link></li>
             <li><Link href="/our-promise">Our Promise</Link></li>
             <li><Link href="/faq">FAQs</Link></li>
             <li><Link href="/quote">Get a Quote</Link></li>
@@ -34,7 +34,7 @@ export function Footer() {
         </div>
 
         <div>
-          <h2>Occasions</h2>
+          <h2>Catering</h2>
           <ul>
             {occasions.map((item) => (
               <li key={item.slug}>

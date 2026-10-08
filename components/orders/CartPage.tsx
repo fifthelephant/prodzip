@@ -11,7 +11,7 @@ import { Bill, Loading, VegMark } from "./bits";
 import { useShop } from "./ShopProvider";
 
 export default function CartPage() {
-  const { ready, inventoryFailed, retryInventory, cart, catalog, now, cartNotice, roomFor, setQty, address, openAddress } = useShop();
+  const { ready, inventoryFailed, retryInventory, cart, catalog, now, cartNotice, roomFor, setQty, address, openAddress, fulfillmentMode } = useShop();
   const router = useRouter();
   useEffect(() => { document.title = `Your Order · ${STORE.name}`; }, []);
 
@@ -32,12 +32,13 @@ export default function CartPage() {
     );
   }
 
-  const t = totals(cart, catalog.items);
+  const t = totals(cart, catalog.items, fulfillmentMode);
   const freeGap = STORE.freeDeliveryAbove && t.sub < STORE.freeDeliveryAbove ? STORE.freeDeliveryAbove - t.sub : 0;
   const plan = deliveryPlan(cart, catalog.items, now);
 
   const proceed = () => {
-    if (!address || !address.ok) openAddress(() => router.push("/orders/checkout/"));
+    if (fulfillmentMode === "pickup") router.push("/orders/checkout/");
+    else if (!address || !address.ok) openAddress(() => router.push("/orders/checkout/"));
     else router.push("/orders/checkout/");
   };
 
@@ -45,7 +46,7 @@ export default function CartPage() {
     <>
       <div className="page">
         <h1>Your Order</h1>
-        <p className="sub">Pre-order from {STORE.name} · home delivery in {STORE.city}</p>
+        <p className="sub">Pre-order from {STORE.name} · {fulfillmentMode === "pickup" ? "pickup / takeaway" : `home delivery in ${STORE.city}`}</p>
         {notice}
         {lines.map((l) => {
           const item = catalog.items[l.id];
@@ -67,8 +68,8 @@ export default function CartPage() {
         })}
         <p><Link href="/orders/" className="link-btn">+ ADD MORE ITEMS</Link></p>
         <Bill t={t} />
-        {freeGap ? <p className="note">Add {money(freeGap)} more for FREE delivery.</p> : null}
-        {t.belowMin ? <p className="note">Minimum order for delivery is {money(STORE.minOrder)}.</p> : null}
+        {fulfillmentMode === "delivery" && freeGap ? <p className="note">Add {money(freeGap)} more for FREE delivery.</p> : null}
+        {fulfillmentMode === "delivery" && t.belowMin ? <p className="note">Minimum order for delivery is {money(STORE.minOrder)}.</p> : null}
         {plan.error ? (
           <p className="notice" role="alert">{plan.error}</p>
         ) : plan.fixed ? (
