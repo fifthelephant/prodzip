@@ -1,0 +1,10 @@
+node_modules
+.verify
+.next
+out
+.DS_Store
+*.log
+.env
+.env*.local
+ordering-source/
+_scrape_*.py
