@@ -12,14 +12,14 @@ export function Header() {
   const [open, setOpen] = useState(false);
 
   function isActive(href: string) {
-    if (href === "/") return pathname === "/";
+    if (href === "/website") return pathname === "/website";
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   return (
     <header className="site-header">
       <div className="header-inner">
-        <Link href="/" className="brand" onClick={() => setOpen(false)}>
+        <Link href="/website" className="brand" onClick={() => setOpen(false)}>
           <SiteLogo />
           <span className="tagline">{site.tagline}</span>
         </Link>

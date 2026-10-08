@@ -31,6 +31,26 @@ export function OccasionGrid() {
   );
 }
 
+export function FounderStory() {
+  return (
+    <section className="section">
+      <div className="section-head">
+        <p className="eyebrow">{site.founderHeading}</p>
+      </div>
+      <div className="founder">
+        <div className="founder-photo">
+          <SiteImage src={images.founder} alt={site.founderImageAlt} />
+        </div>
+        <div className="prose">
+          {site.founderStory.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function Process() {
   return (
     <section className="section band">

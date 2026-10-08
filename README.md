@@ -17,7 +17,7 @@ For day-to-day editing, `npm run dev` starts a local preview that reloads as you
 
 ## Pages
 
-- `/` is the landing page with links to the catering website and online ordering.
+- `/` and `/landingpage` are the two-option landing page, with links to the catering website and online ordering.
 - `/website` opens the existing catering homepage; its existing menu, quote, about and information pages remain available.
 - `/orders` opens online ordering. Cart, item, checkout and order confirmation pages live below `/orders`.
 

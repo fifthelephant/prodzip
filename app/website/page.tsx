@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   CtaBand,
   FaqList,
+  FounderStory,
   InstagramBand,
   OccasionGrid,
   Process,
@@ -33,6 +34,7 @@ export default function HomePage() {
           <SiteImage src={images.hero} alt="A Marwadi Khana thali of home-style Rajasthani food" priority />
         </div>
       </section>
+      <FounderStory />
       <OccasionGrid />
       <Process />
       <WhyChoose />

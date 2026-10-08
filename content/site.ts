@@ -35,10 +35,18 @@ export const site = {
   ],
   promiseClose:
     "Our goal is simple — to make hosting easier while ensuring every guest leaves with a smile.",
+  founderHeading: "Meet the Founder",
+  founderImageAlt: "Founder of Marwadi Khana",
+  founderStory: [
+    "Marwadi Khana began with a piece of my own story.",
+    "Growing up, food was always at the heart of our home - recipes passed down through generations, tables filled with family, and the warmth of Marwadi hospitality that made every meal feel like an occasion.",
+    "In 2014, I started Marwadi Khana from my home kitchen with a simple wish: to share that same warmth, authenticity and love with others.",
+    "Today, whether we are serving an intimate gathering or a grand celebration, I still want every guest to experience what inspired me in the first place - food that carries the taste of our roots and the feeling of home.",
+  ],
 } as const;
 
 export const nav = [
-  { href: "/", label: "Home" },
+  { href: "/website", label: "Home" },
   { href: "/about", label: "About Us" },
   { href: "/menu", label: "Menu" },
   { href: "/occasions", label: "Occasions" },

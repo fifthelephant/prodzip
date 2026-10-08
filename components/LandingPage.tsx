@@ -1,0 +1,41 @@
+import Link from "next/link";
+import { SiteImage } from "@/components/SiteImage";
+import { images } from "@/content/images";
+import { site } from "@/content/site";
+
+export function LandingPage() {
+  return (
+    <section className="home-gateway">
+      <div className="gateway-photo">
+        <SiteImage
+          src={images.landing}
+          alt="Ghee being poured over a Rajasthani thali"
+          priority
+        />
+      </div>
+      <div className="gateway-content">
+        <p className="eyebrow">{site.tagline}</p>
+        <h1>Welcome to Marwadi Khana</h1>
+        <p className="lede">{site.heroLede}</p>
+        <div className="gateway-actions">
+          <Link href="/website" className="gateway-card">
+            <span className="gateway-icon" aria-hidden="true">✦</span>
+            <span>
+              <strong>Explore Our Website</strong>
+              <small>Catering services, menus and our founder story</small>
+            </span>
+            <span aria-hidden="true">↗</span>
+          </Link>
+          <Link href="/orders" className="gateway-card gateway-order">
+            <span className="gateway-icon" aria-hidden="true">♨</span>
+            <span>
+              <strong>Order Online</strong>
+              <small>Shop mithai, build your order and check out</small>
+            </span>
+            <span aria-hidden="true">↗</span>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}

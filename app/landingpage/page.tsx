@@ -1,5 +1,5 @@
 import { LandingPage } from "@/components/LandingPage";
 
-export default function HomePage() {
+export default function LandingPageRoute() {
   return <LandingPage />;
 }
