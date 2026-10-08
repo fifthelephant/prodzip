@@ -4,14 +4,14 @@ Combined Marwadi Khana catering and online ordering website, built with Next.js 
 
 ## Run it
 
-macOS, Linux, or Git Bash on Windows:
+On Windows, double-click `startup.bat` or run it from Command Prompt. On macOS, Linux, or Git Bash on Windows, run:
 
 ```bash
 chmod +x startup.sh
 ./startup.sh
 ```
 
-The script installs dependencies, builds the site, and starts it at http://localhost:3001. Set `PORT` to override that port. Change the default in `startup.sh` to move the site to port 3000 later. Node.js 20 or newer is required.
+Both startup scripts install dependencies, build the site, and start it at http://localhost:3000. Node.js 20 or newer is required.
 
 For day-to-day editing, `npm run dev` starts a local preview that reloads as you change files.
 

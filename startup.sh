@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install dependencies, build, and host the combined Marwadi Khana website.
-# Usage: ./startup.sh (defaults to port 3001; set PORT to override)
+# Usage: ./startup.sh (installs, builds, and starts on port 3000)
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -26,6 +26,5 @@ npm install
 echo "Building the website..."
 npm run build
 
-PORT="${PORT:-3001}"
-echo "Marwadi Khana is available at http://localhost:${PORT}"
-npx next start -p "$PORT"
+echo "Marwadi Khana is available at http://localhost:3000"
+npx next start -p 3000
