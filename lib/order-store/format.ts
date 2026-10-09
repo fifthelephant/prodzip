@@ -10,6 +10,6 @@ export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 /** Photo paths in the menu/Sheet are written like "images/x.webp"; make them work on every page. */
 export function asset(src: string): string {
-  if (/^(https?:|data:|\/\/)/.test(src)) return src;
+  if (/^(https?:|data:|\/\/|\/menu-image\/)/.test(src)) return src;
   return `${BASE_PATH}/orders/${src.replace(/^\/+/, "")}`;
 }
