@@ -78,7 +78,7 @@ export function Bill({ t, fulfillment = "delivery", zone = "unknown" }: { t: Tot
     <div className="bill">
       <div className="row"><span>Item Sub Total</span><span>{money(t.sub)}</span></div>
       {t.discount > 0 ? <div className="row off"><span>Discount</span><span>−{money(t.discount)}</span></div> : null}
-      {t.packaging > 0 ? <div className="row"><span>Packaging & handling</span><span>{money(t.packaging)}</span></div> : null}
+      <div className="row"><span>Packaging & Handling Charges</span><span>{money(t.packaging)}</span></div>
       <div className="row"><span>Delivery Charges</span><span>{deliveryDisplay(t, fulfillment, zone)}</span></div>
       <div className="row"><span>GST</span><span>{money(t.tax)}</span></div>
       <div className="row total"><span>To Pay</span><span>{money(t.total)}</span></div>

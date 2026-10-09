@@ -7,17 +7,21 @@ import type { FulfillmentMode } from "@/lib/order-store/types";
 import { useShop } from "./ShopProvider";
 
 const modes: { id: FulfillmentMode; icon: string; title: string; copy: string; action: string }[] = [
-  { id: "delivery", icon: "🛵", title: "Home delivery", copy: `Choose a delivery address across ${STORE.city}.`, action: "Order for delivery" },
+  { id: "delivery", icon: "🛵", title: "Home delivery", copy: "Choose for Delivery Across Delhi NCR", action: "Order for delivery" },
   { id: "pickup", icon: "🥡", title: "Pickup / takeaway", copy: `Place your order ahead and collect it from ${STORE.pickupAddress}.`, action: "Order for pickup" },
 ];
 
 export default function FulfillmentPage() {
-  const { setFulfillmentMode } = useShop();
+  const { setFulfillmentMode, openAddress } = useShop();
   const router = useRouter();
   useEffect(() => { document.title = `Choose how to order · ${STORE.name}`; }, []);
 
   function choose(mode: FulfillmentMode) {
     setFulfillmentMode(mode);
+    if (mode === "delivery") {
+      openAddress(() => router.push("/orders/"));
+      return;
+    }
     router.push("/orders/");
   }
 
@@ -33,6 +37,6 @@ export default function FulfillmentPage() {
         <button className="btn primary block" onClick={() => choose(mode.id)}>{mode.action} <span aria-hidden="true">→</span></button>
       </article>)}
     </div>
-    <a className="fulfillment-back" href="/">← Back to catering website</a>
+    <a className="fulfillment-back" href="/">← Back to Home</a>
   </section>;
 }

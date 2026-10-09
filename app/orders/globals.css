@@ -265,11 +265,11 @@
 .ordering-app .pay-foot .inner { flex-direction: column; align-items: stretch; gap: 8px; }
 .ordering-app .pay-foot .topay { display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 600; }
 .ordering-app .delivery-actuals-note {
-  margin: 0;
+  margin: 10px 0 0;
   font-weight: 700;
   font-size: .92rem;
   line-height: 1.4;
-  color: var(--ink);
+  color: var(--maroon);
 }
 
 /* ---------- Checkout form ---------- */

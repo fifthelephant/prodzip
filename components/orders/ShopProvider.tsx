@@ -273,6 +273,8 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     return key;
   }, [commitCart, roomFor, toast]);
 
+  const clearSavedAddress = useCallback(() => { setAddressState(null); save("address", null); }, []);
+
   const setQty = useCallback((key: string, qty: number) => {
     const cur = cartRef.current;
     const line = cur.find((l) => l.key === key);
@@ -283,10 +285,12 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
       toast(item && hasStockLimit(item) ? `Only ${item.stock} left in stock` : "Sorry, this item is sold out");
       qty = max;
     }
-    commitCart(qty <= 0 ? cur.filter((l) => l.key !== key) : cur.map((l) => (l.key === key ? { ...l, qty } : l)));
-  }, [commitCart, roomFor, toast]);
+    const next = qty <= 0 ? cur.filter((l) => l.key !== key) : cur.map((l) => (l.key === key ? { ...l, qty } : l));
+    commitCart(next);
+    if (!next.length) clearSavedAddress();
+  }, [clearSavedAddress, commitCart, roomFor, toast]);
 
-  const clearCart = useCallback(() => commitCart([]), [commitCart]);
+  const clearCart = useCallback(() => { commitCart([]); clearSavedAddress(); }, [clearSavedAddress, commitCart]);
 
   const setAddress = useCallback((a: Address) => { setAddressState(a); save("address", a); }, []);
   const setFulfillmentMode = useCallback((mode: FulfillmentMode) => { setFulfillmentModeState(mode); save("fulfillment", mode); }, []);

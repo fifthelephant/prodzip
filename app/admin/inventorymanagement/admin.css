@@ -98,6 +98,12 @@
 .order-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0 0; padding-top: 10px; border-top: 1px solid #e8e0d6; color: #84796e; font-size: 12px; }
 .order-total b { color: #4b171f; font-size: 16px; }
 .payment-list { display: grid; gap: 12px; padding: 18px; }
+.order-view-tabs { display: flex; gap: 8px; padding: 0 18px 14px; }
+.order-view-tabs button { min-height: 36px; padding: 8px 14px; border: 1px solid #ded6cb; border-radius: 999px; background: #fffdf9; color: #4f453c; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; }
+.order-view-tabs button.active { border-color: #781b2d; background: #781b2d; color: #fff8ed; }
+.order-card-top { align-items: center; }
+.order-status { display: grid; gap: 4px; color: #756b60; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.order-status select { min-width: 160px; padding: 8px 10px; border: 1px solid #ded6cb; border-radius: 8px; background: #fff; color: #29231d; font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .charge-form { max-width: 560px; margin: 8px 18px 22px; padding-top: 18px; border-top: 1px solid #eee8e0; }
 .charge-form h2 { margin: 0; color: #271b14; font-family: var(--font-display), Georgia, serif; font-size: 28px; }
 .charge-form p, .charge-preview { margin: 8px 0 0; color: #766d63; font-size: 14px; font-weight: 500; letter-spacing: 0; line-height: 1.45; }

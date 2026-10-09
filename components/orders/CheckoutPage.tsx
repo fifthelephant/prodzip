@@ -7,8 +7,7 @@ import { resolveDeliveryZone } from "@/lib/order-store/area";
 import { hourLabel, money } from "@/lib/order-store/format";
 import { sendOrder } from "@/lib/order-store/order";
 import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
-import { discountForCode } from "@/lib/order-store/pricing";
-import { buildSlots, deliveryPlan, fmtDay, pastCutoff } from "@/lib/order-store/schedule";
+import { buildSlots, calendarRange, deliveryPlan, fmtDay, isoDay, openOrderSlots, parseDay, pastCutoff } from "@/lib/order-store/schedule";
 import { save, load } from "@/lib/order-store/storage";
 import type { Order } from "@/lib/order-store/types";
 import { Bill, Loading } from "./bits";
@@ -25,7 +24,7 @@ export default function CheckoutPage() {
 
 function CheckoutForm() {
   const shop = useShop();
-  const { cart, catalog, discounts, payments, charges, now: shopNow, address, openAddress, customer, setCustomer,
+  const { cart, catalog, payments, charges, now: shopNow, address, openAddress, customer, setCustomer,
     fulfillmentMode, toast, applyInventory, setCartNotice, clearCart, refreshInventory, checkoutOrderId, resetCheckoutOrderId } = shop;
   const router = useRouter();
 
@@ -35,15 +34,13 @@ function CheckoutForm() {
     house: customer.house || "", landmark: customer.landmark || "", notes: ""
   }));
   const [showNotes, setShowNotes] = useState(false);
-  const [discountCode, setDiscountCode] = useState("");
-  const [appliedCode, setAppliedCode] = useState("");
-  const [couponMessage, setCouponMessage] = useState("");
   const [payment, setPayment] = useState<"RAZORPAY" | "COD">("COD");
   useEffect(() => {
     if (payment === "COD" && !payments.cod && payments.razorpay) setPayment("RAZORPAY");
     if (payment === "RAZORPAY" && !payments.razorpay && payments.cod) setPayment("COD");
   }, [payment, payments]);
   const [dayIdx, setDayIdx] = useState(0);
+  const [calendarDate, setCalendarDate] = useState("");
   const [slot, setSlot] = useState("");
   const [bad, setBad] = useState<Partial<Record<Field, boolean>>>({});
   const [placing, setPlacing] = useState(false);
@@ -53,11 +50,18 @@ function CheckoutForm() {
   const fieldRefs = useRef<Partial<Record<Field, HTMLDivElement | null>>>({});
 
   const zone = resolveDeliveryZone(address, fulfillmentMode);
-  const selectedDiscount = discountForCode(appliedCode, discounts);
-  const t = totals(cart, catalog.items, fulfillmentMode, zone, selectedDiscount, charges);
-  const showActualsNote = fulfillmentMode === "delivery" && zone === "actuals";
+  const t = totals(cart, catalog.items, fulfillmentMode, zone, undefined, charges);
+  const showActualsNote = fulfillmentMode === "delivery";
   const plan = useMemo(() => deliveryPlan(cart, catalog.items, now), [cart, catalog.items, now]);
   const days = useMemo(() => buildSlots(plan), [plan]);
+  const range = useMemo(() => calendarRange(now), [now]);
+
+  useEffect(() => {
+    if (!plan.calendar) return;
+    const min = isoDay(range.min);
+    const max = isoDay(range.max);
+    setCalendarDate((current) => (current >= min && current <= max ? current : min));
+  }, [plan.calendar, range]);
 
   // Nothing to check out (or a cart that can't go as one order) → back to the cart.
   useEffect(() => {
@@ -70,7 +74,11 @@ function CheckoutForm() {
   // The chosen day/slot, kept valid as slots change (e.g. same-day slots expiring).
   const dayI = dayIdx < days.length ? dayIdx : 0;
   const day = days[dayI];
-  const slotV = day && day.slots.includes(slot) ? slot : day ? day.slots[0] : "";
+  const calendarSlots = plan.calendar && /^\d{4}-\d{2}-\d{2}$/.test(calendarDate) ? openOrderSlots(parseDay(calendarDate)) : [];
+  const slotV = plan.calendar
+    ? (calendarSlots.includes(slot) ? slot : calendarSlots[0] || "")
+    : (day && day.slots.includes(slot) ? slot : day ? day.slots[0] : "");
+  const chosenLabel = plan.calendar && calendarDate ? fmtDay(parseDay(calendarDate)) : day?.label || "";
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: k === "phone" ? e.target.value.replace(/\D/g, "").slice(0, 10) : e.target.value }));
@@ -90,18 +98,23 @@ function CheckoutForm() {
     setBad(badNow);
     const firstBad = (Object.keys(checks) as Field[]).find((k) => !checks[k]);
     if (firstBad) { fieldRefs.current[firstBad]?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-    if (!days.length) { toast("No slots available right now. Please call us to order."); return; }
+    if (!plan.calendar && !days.length) { toast("No slots available right now. Please call us to order."); return; }
+    if (plan.calendar && !slotV) { toast("Please choose a delivery date and time."); return; }
     if (!payments.cod && !payments.razorpay) { toast("Ordering is paused. Please call us to place this order."); return; }
     if ((payment === "COD" && !payments.cod) || (payment === "RAZORPAY" && !payments.razorpay)) { toast("That payment method is not available. Please choose another one."); return; }
 
     // The 6 PM cut-off (or a same-day slot) may have passed while the form was being filled.
-    const chosen = days[dayI];
-    const fresh = buildSlots(deliveryPlan(cart, catalog.items, new Date()));
-    if (!fresh.some((d) => d.label === chosen.label && d.slots.includes(slotV))) {
+    const freshNow = new Date();
+    const freshPlan = deliveryPlan(cart, catalog.items, freshNow);
+    const stillOpen = freshPlan.calendar
+      ? calendarDate >= isoDay(calendarRange(freshNow).min) && calendarDate <= isoDay(calendarRange(freshNow).max) && openOrderSlots(parseDay(calendarDate)).includes(slotV)
+      : buildSlots(freshPlan).some((d) => d.label === chosenLabel && d.slots.includes(slotV));
+    if (!stillOpen) {
       toast(`The ${hourLabel(STORE.orderCutoffHour)} cut-off has passed. Please pick a new delivery date.`);
       shop.setCustomer({ ...customer, name: v("name"), email: v("email"), phone: v("phone"), house: v("house"), landmark: v("landmark") });
-      setNowOverride(new Date());
+      setNowOverride(freshNow);
       setDayIdx(0);
+      setCalendarDate("");
       return;
     }
 
@@ -113,7 +126,7 @@ function CheckoutForm() {
     const order: Order = {
       id,
       placedAt: new Date().toISOString(),
-      slot: `${chosen.label}, ${slotV}`,
+      slot: `${chosenLabel}, ${slotV}`,
       payment,
       fulfillment: fulfillmentMode,
       customer: { name: c.name, email: c.email, phone: "+91" + c.phone },
@@ -125,7 +138,7 @@ function CheckoutForm() {
         return { id: item.id, name: item.name, options: selLabel(item, l.sel), qty: l.qty, price: unitPrice(item, l.sel) * l.qty };
       }),
       notes: v("notes"),
-      discountCode: selectedDiscount && t.discount ? selectedDiscount.code : undefined,
+      discountCode: undefined,
       totals: { sub: t.sub, discount: t.discount, delivery: t.delivery, tax: t.tax, packaging: t.packaging, total: t.total }
     };
 
@@ -140,7 +153,7 @@ function CheckoutForm() {
             fulfillment: fulfillmentMode,
             addressText: fulfillmentMode === "delivery" ? address?.text || "" : "",
             zone,
-            discountCode: selectedDiscount && t.discount ? selectedDiscount.code : "",
+            discountCode: "",
             customer: { name: c.name, email: c.email, phone: c.phone },
           }),
         });
@@ -245,35 +258,34 @@ function CheckoutForm() {
   return (
     <>
       <form className="page" id="checkoutForm" noValidate onSubmit={submit}>
-        <div className="field coupon-field">
-          <label htmlFor="discountCode">Discount code</label>
-          <div className="coupon-entry"><input id="discountCode" value={discountCode} onChange={(e) => { setDiscountCode(e.target.value.toUpperCase()); setAppliedCode(""); setCouponMessage(""); }} placeholder="Enter a code" autoCapitalize="characters" /><button type="button" className="btn ghost" onClick={() => {
-            if (!discountCode.trim()) { setCouponMessage("Enter a discount code first."); return; }
-            const rule = discountForCode(discountCode, discounts);
-            const amount = rule ? totals(cart, catalog.items, fulfillmentMode, zone, rule).discount : 0;
-            if (amount) { setAppliedCode(rule!.code); setCouponMessage(`Code applied. You save ${money(amount)}.`); }
-            else { setAppliedCode(""); setCouponMessage("That code is invalid, expired, or not valid for this order."); }
-          }}>{appliedCode ? "Apply again" : "Apply"}</button></div>
-          {couponMessage ? <p className={`coupon-message${t.discount ? " success" : ""}`} role="status">{couponMessage}</p> : null}
-        </div>
         <div className="field">
           <span className="lbl">{fulfillmentMode === "pickup" ? "Pickup Date & Slot" : "Delivery Date & Slot"} <span className="req">*</span></span>
           {plan.fixed ? (
-              <p className="hint thali-hint">🍱 Your Navratri thali is available for {fulfillmentMode === "pickup" ? "pickup" : "delivery"} on <b>{fmtDay(plan.fixed)}</b>. Pick a time slot.</p>
+              <p className="hint thali-hint">🍱 Your Navratri thali is on <b>{fmtDay(plan.fixed)}</b>. Halwa and any other items in this order are delivered the same day. Pick a time slot.</p>
           ) : (
             <p className="hint">
-              Pre-orders placed before {hourLabel(STORE.orderCutoffHour)} can be {fulfillmentMode === "pickup" ? "picked up" : "delivered"} {STORE.preorderMinDays === 1 ? "the next day" : `in ${STORE.preorderMinDays} days`}.
-              {pastCutoff(now) ? ` Today's ${hourLabel(STORE.orderCutoffHour)} cut-off has passed, so the earliest date is one day later.` : ""}
+              Choose the date from the calendar. The earliest is {fmtDay(range.min)}.
+              {pastCutoff(now) ? ` Today's ${hourLabel(STORE.orderCutoffHour)} cut-off has passed, so that date is one day later.` : ""}
             </p>
           )}
-          <div className="two">
-            <select id="day" aria-label="Date" value={dayI} onChange={(e) => { setDayIdx(Number(e.target.value)); setSlot(""); }}>
-              {days.map((d, i) => <option key={d.label} value={i}>{d.label}</option>)}
-            </select>
-            <select id="slot" aria-label="Time slot" value={slotV} onChange={(e) => setSlot(e.target.value)}>
-              {(day ? day.slots : []).map((s) => <option key={s}>{s}</option>)}
-            </select>
-          </div>
+          {plan.calendar ? (
+            <div className="two">
+              <input id="day" type="date" aria-label="Date" min={isoDay(range.min)} max={isoDay(range.max)} value={calendarDate} onChange={(e) => { setCalendarDate(e.target.value); setSlot(""); }} required />
+              <select id="slot" aria-label="Time slot" value={slotV} onChange={(e) => setSlot(e.target.value)}>
+                {calendarSlots.map((s) => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div className="two">
+              <select id="day" aria-label="Date" value={dayI} onChange={(e) => { setDayIdx(Number(e.target.value)); setSlot(""); }}>
+                {days.map((d, i) => <option key={d.label} value={i}>{d.label}</option>)}
+              </select>
+              <select id="slot" aria-label="Time slot" value={slotV} onChange={(e) => setSlot(e.target.value)}>
+                {(day ? day.slots : []).map((s) => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+          {showActualsNote ? <p className="delivery-actuals-note">Delivery Charges are Extra and to be paid on actuals by Customer</p> : null}
         </div>
         <div className={`field${bad.name ? " bad" : ""}`} data-f="name" ref={(el) => { fieldRefs.current.name = el; }}>
           <label htmlFor="name">Name <span className="req">*</span></label>
@@ -330,7 +342,7 @@ function CheckoutForm() {
       <div className="sticky-foot pay-foot">
         <div className="inner">
           {showActualsNote ? (
-            <p className="delivery-actuals-note">Delivery charges are extra and on actuals to be paid by customer</p>
+            <p className="delivery-actuals-note">Delivery Charges are Extra and to be paid on actuals by Customer</p>
           ) : null}
           <div className="topay"><span>To Pay</span><span>{money(t.total)}</span></div>
           <button className="btn primary block" id="payNow" type="submit" form="checkoutForm" disabled={placing || (!payments.cod && !payments.razorpay)}>{payLabel}</button>

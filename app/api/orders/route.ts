@@ -94,6 +94,7 @@ export async function POST(request: Request) {
       store.orders.push({
         ...body,
         placedAt: new Date().toISOString(),
+        status: "received",
         items: body.items.map((line) => ({ ...line, name: items[line.id].name })),
         totals: { ...pricing },
       });

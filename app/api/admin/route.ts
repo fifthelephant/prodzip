@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { hasAdminSession, sameOrigin } from "@/lib/admin/auth";
 import { readCsvStore, saveImageData, withCsvStore } from "@/lib/order-store/csv-store";
 import { razorpayKeysConfigured } from "@/lib/order-store/payments";
-import type { ChargeSettings, DiscountRule, InventoryRow, PaymentSettings } from "@/lib/order-store/types";
+import { ORDER_STATUSES, type ChargeSettings, type DiscountRule, type InventoryRow, type PaymentSettings } from "@/lib/order-store/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   if (size > 5_000_000) return NextResponse.json({ error: "The upload is too large. Choose an image under 3 MB." }, { status: 413 });
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   if (!body || typeof body.operation !== "string") return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  if (!["save-item", "delete-item", "save-discount", "delete-discount", "upload-image", "save-payments", "save-charges"].includes(body.operation)) return NextResponse.json({ error: "Unsupported inventory action." }, { status: 400 });
+  if (!["save-item", "delete-item", "save-discount", "delete-discount", "upload-image", "save-payments", "save-charges", "save-order-status"].includes(body.operation)) return NextResponse.json({ error: "Unsupported inventory action." }, { status: 400 });
   try {
     if (body.operation === "upload-image") {
       if (typeof body.name !== "string" || typeof body.data !== "string") throw new Error("Choose an image file.");
@@ -60,8 +60,14 @@ export async function POST(request: Request) {
         store.payments = next;
       } else if (body.operation === "save-charges") {
         store.charges = adminCharges(body.charges);
+      } else if (body.operation === "save-order-status") {
+        const id = typeof body.id === "string" ? body.id : "";
+        const status = ORDER_STATUSES.find((item) => item === body.status) || "";
+        const order = store.orders.find((item) => item.id === id);
+        if (!order || !status) throw new Error("That order could not be updated.");
+        order.status = status;
       }
-      return { ok: true, items: store.items, discounts: store.discounts, payments: store.payments, charges: store.charges };
+      return { ok: true, items: store.items, discounts: store.discounts, payments: store.payments, charges: store.charges, orders: store.orders };
     });
     return NextResponse.json({ ...result, razorpayConfigured: razorpayKeysConfigured() }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not save changes." }, { status: 503 }); }

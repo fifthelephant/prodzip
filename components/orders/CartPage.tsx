@@ -69,11 +69,12 @@ export default function CartPage() {
         })}
         <p><Link href="/orders/" className="link-btn">+ ADD MORE ITEMS</Link></p>
         <Bill t={t} fulfillment={fulfillmentMode} zone={zone} />
+        {fulfillmentMode === "delivery" ? <p className="delivery-actuals-note">Delivery Charges are Extra and to be paid on actuals by Customer</p> : null}
         {fulfillmentMode === "delivery" && t.belowMin ? <p className="note">Minimum order for delivery is {money(STORE.minOrder)}.</p> : null}
         {plan.error ? (
           <p className="notice" role="alert">{plan.error}</p>
         ) : plan.fixed ? (
-          <p className="note thali-note">🍱 This order will be delivered on <b>{fmtDay(plan.fixed)}</b>, your thali&apos;s day.</p>
+          <p className="note thali-note">🍱 Your Navratri thali and any other items, such as halwa, will be delivered together on <b>{fmtDay(plan.fixed)}</b>.</p>
         ) : null}
       </div>
       <div className="sticky-foot pay-foot">

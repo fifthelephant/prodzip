@@ -8,7 +8,7 @@ export default function HomePage() {
   return <>
     <section className="hero">
       <div className="hero-copy"><p className="eyebrow">{site.tagline}</p><h1>{site.heroTitle}</h1><p className="lede">{site.heroLede}</p>
-        <div className="button-row"><Link href="/menu" className="btn btn-gold">View Menus</Link><Link href="/orders/start/" className="btn btn-line">Orders</Link></div>
+        <div className="button-row"><Link href="/menu" className="btn btn-gold">View Menus</Link><Link href="/orders/start/" className="btn btn-line">Order Now</Link></div>
       </div>
       <div className="media hero-media"><SiteImage src={images.hero} alt="A hand pouring golden ghee over a Marwadi Khana thali" priority /></div>
     </section>

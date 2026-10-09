@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, stat, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { MENU } from "@/data/order-store/menu";
-import { DEFAULT_CHARGES, DEFAULT_PAYMENTS, type ChargeSettings, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "@/lib/order-store/types";
+import { DEFAULT_CHARGES, DEFAULT_PAYMENTS, ORDER_STATUSES, type ChargeSettings, type DiscountRule, type InventoryRow, type Order, type OrderStatus, type PaymentSettings } from "@/lib/order-store/types";
 
 export interface CsvStore {
   items: InventoryRow[];
@@ -27,7 +27,7 @@ const INVENTORY_COLUMNS: (keyof InventoryRow)[] = [
 const DISCOUNT_COLUMNS: (keyof DiscountRule)[] = [
   "code", "type", "value", "minimum_subtotal", "active", "starts_at", "ends_at", "item_ids", "category_ids", "max_uses", "uses",
 ];
-const ORDER_COLUMNS: (keyof Order)[] = ["id", "placedAt", "slot", "payment", "fulfillment", "customer", "address", "items", "notes", "discountCode", "totals"];
+const ORDER_COLUMNS: (keyof Order)[] = ["id", "placedAt", "slot", "payment", "fulfillment", "customer", "address", "items", "notes", "discountCode", "status", "totals"];
 const SETTINGS_COLUMNS = ["razorpay", "cod", "packaging_percent", "packaging_max"] as const;
 
 function csvCell(value: unknown): string {
@@ -103,11 +103,15 @@ function settingsRow(payments: PaymentSettings, charges: ChargeSettings) {
   return { razorpay: payments.razorpay, cod: payments.cod, packaging_percent: charges.packagingPercent, packaging_max: charges.packagingMax };
 }
 
+function readOrderStatus(value: string): OrderStatus {
+  return ORDER_STATUSES.find((status) => status === value) || "received";
+}
+
 function ordersFromCsv(text: string): Order[] {
   return parseCsv(text).map((r) => ({
     id: r.id, placedAt: r.placedAt, slot: r.slot, payment: r.payment as Order["payment"], fulfillment: r.fulfillment === "pickup" ? "pickup" : "delivery",
     customer: parseJson(r.customer, { name: "", email: "", phone: "" }), address: parseJson(r.address, { line: "", map: "", lat: null, lng: null }),
-    items: parseJson(r.items, []), notes: r.notes, discountCode: r.discountCode, totals: parseJson(r.totals, { sub: 0, discount: 0, delivery: 0, tax: 0, packaging: 0, total: 0 }),
+    items: parseJson(r.items, []), notes: r.notes, discountCode: r.discountCode, status: readOrderStatus(r.status), totals: parseJson(r.totals, { sub: 0, discount: 0, delivery: 0, tax: 0, packaging: 0, total: 0 }),
   }));
 }
 

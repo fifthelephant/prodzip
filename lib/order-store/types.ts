@@ -149,6 +149,18 @@ export interface ChargeSettings {
 
 export const DEFAULT_CHARGES: ChargeSettings = { packagingPercent: 2.5, packagingMax: 100 };
 
+export const ORDER_STATUSES = ["received", "inprogress", "packed", "out-for-delivery", "delivered", "cancelled"] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  received: "Received",
+  inprogress: "In progress",
+  packed: "Packed",
+  "out-for-delivery": "Out for delivery",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
 export interface Order {
   id: string;
   placedAt: string;
@@ -160,6 +172,7 @@ export interface Order {
   items: { id: string; name: string; options: string; qty: number; price: number }[];
   notes: string;
   discountCode?: string;
+  status?: OrderStatus;
   totals: { sub: number; discount: number; delivery: number; tax: number; packaging: number; total: number };
 }
 

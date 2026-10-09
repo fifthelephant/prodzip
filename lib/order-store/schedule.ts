@@ -16,20 +16,39 @@ export const fmtDate = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeri
 export const sameDayEarliest = (now: Date) => new Date(now.getTime() + STORE.sameDayPrepHours * 3600000);
 export const pastCutoff = (now: Date) => now.getHours() >= STORE.orderCutoffHour;
 
-/** Delivery slots on one day, e.g. "10:00 – 11:30 AM"; slots starting before `earliest` are left out. */
-export function slotsOn(day: Date, earliest?: Date | null): string[] {
+export const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/** Delivery slots on one day; slots starting before `earliest` are left out. */
+export function slotsBetween(day: Date, openHour: number, closeHour: number, slotHours: number, earliest?: Date | null): string[] {
   const hm = (d: Date) => `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")}`;
   const ap = (d: Date) => (d.getHours() < 12 ? "AM" : "PM");
   const range = (a: Date, b: Date) =>
     ap(a) === ap(b) ? `${hm(a)} – ${hm(b)} ${ap(b)}` : `${hm(a)} ${ap(a)} – ${hm(b)} ${ap(b)}`;
   const out: string[] = [];
-  for (let h = STORE.openHour; h + STORE.slotHours <= STORE.closeHour + 1e-9; h += STORE.slotHours) {
+  for (let h = openHour; h + slotHours <= closeHour + 1e-9; h += slotHours) {
     const start = new Date(day);
     start.setHours(Math.floor(h), Math.round((h % 1) * 60), 0, 0);
     if (earliest && start < earliest) continue;
-    out.push(range(start, new Date(start.getTime() + STORE.slotHours * 3600000)));
+    out.push(range(start, new Date(start.getTime() + slotHours * 3600000)));
   }
   return out;
+}
+
+/** Delivery slots on one day, e.g. "10:00 – 11:30 AM"; slots starting before `earliest` are left out. */
+export function slotsOn(day: Date, earliest?: Date | null): string[] {
+  return slotsBetween(day, STORE.openHour, STORE.closeHour, STORE.slotHours, earliest);
+}
+
+/** Open orders: hourly slots from 7:00–8:00 AM through 8:00–9:00 PM. */
+export function openOrderSlots(day: Date, earliest?: Date | null): string[] {
+  return slotsBetween(day, 7, 21, 1, earliest);
+}
+
+/** Earliest and latest calendar dates for an order that has no fixed thali day. */
+export function calendarRange(now: Date): { min: Date; max: Date } {
+  const today = startOfDay(now);
+  const minDays = STORE.preorderMinDays + (pastCutoff(now) ? 1 : 0);
+  return { min: addDays(today, minDays), max: addDays(today, 60) };
 }
 
 export type WindowStatus = "upcoming" | "open" | "closed";
@@ -72,19 +91,12 @@ export function blockedLabel(item: MenuItem, now: Date, long = false): string {
   return "";
 }
 
-/** Regular items: from tomorrow (or the day after, past the 6 PM cut-off), for preorderMaxDays. */
-export function regularDays(now: Date): Date[] {
-  const today = startOfDay(now);
-  const minDays = STORE.preorderMinDays + (pastCutoff(now) ? 1 : 0);
-  const out: Date[] = [];
-  for (let d = minDays; d <= minDays + STORE.preorderMaxDays - STORE.preorderMinDays; d++) out.push(addDays(today, d));
-  return out;
-}
-
 export interface DeliveryPlan {
   days: Date[];
-  /** Set when the cart holds a thali: its delivery day. */
+  /** Set when the cart holds a thali: its delivery day. Other items go out that same day. */
   fixed?: Date;
+  /** No thali in the cart: the customer picks any date from the calendar. */
+  calendar?: boolean;
   /** Same-day thali orders: slots must start after this. */
   earliest?: Date | null;
   /** Why this cart can't be checked out as one order. */
@@ -92,14 +104,13 @@ export interface DeliveryPlan {
 }
 
 /**
- * Which days can this cart be delivered on? A thali: only on its own day.
- * Thali + regular items: the thali's day, if the regular items can make it too.
+ * Which days can this cart be delivered on? A Navratri thali fixes the day for
+ * the whole order, including halwa and any other items. Without a thali, the
+ * customer picks a date from the calendar.
  */
 export function deliveryPlan(cart: CartLine[], items: Record<string, MenuItem>, now: Date): DeliveryPlan {
   const lines = cart.map((l) => items[l.id]).filter(Boolean);
   const fixed = [...new Set(lines.map((i) => i.deliveryDate).filter(Boolean))] as string[];
-  const regular = lines.filter((i) => !i.deliveryDate);
-  const regDays = regularDays(now);
   if (fixed.length > 1) {
     return {
       days: [],
@@ -108,17 +119,9 @@ export function deliveryPlan(cart: CartLine[], items: Record<string, MenuItem>, 
   }
   if (fixed.length === 1) {
     const day = parseDay(fixed[0]);
-    if (regular.length && !regDays.some((d) => sameDay(d, day))) {
-      const names = [...new Set(regular.map((i) => i.name))].join(", ");
-      return {
-        days: [],
-        fixed: day,
-        error: `Your thali is delivered on ${fmtDay(day)}, but ${names} can only be delivered from ${fmtDay(regDays[0])}. Please order them separately.`
-      };
-    }
     return { days: [day], fixed: day, earliest: sameDay(day, now) ? sameDayEarliest(now) : null };
   }
-  return { days: regDays };
+  return { days: [], calendar: true };
 }
 
 export interface SlotDay { label: string; slots: string[] }

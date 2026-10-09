@@ -52,7 +52,7 @@ export default function OrderPage() {
         <div className="bill">
           <div className="row"><span>Items</span><span>{money(o.totals.sub)}</span></div>
           {o.totals.discount ? <div className="row off"><span>Discount{o.discountCode ? ` · ${o.discountCode}` : ""}</span><span>−{money(o.totals.discount)}</span></div> : null}
-          {o.totals.packaging ? <div className="row"><span>Packaging & handling</span><span>{money(o.totals.packaging)}</span></div> : null}
+          <div className="row"><span>Packaging & Handling Charges</span><span>{money(o.totals.packaging || 0)}</span></div>
           {o.totals.delivery ? <div className="row"><span>Delivery</span><span>{money(o.totals.delivery)}</span></div> : null}
           {o.totals.tax ? <div className="row"><span>GST</span><span>{money(o.totals.tax)}</span></div> : null}
           <div className="row total"><span>Total</span><span>{money(o.totals.total)}</span></div>

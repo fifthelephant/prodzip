@@ -13,7 +13,7 @@ export function whatsappText(o: Order): string {
     `Sub total: ${money(o.totals.sub)}`,
     o.totals.discount ? `Discount${o.discountCode ? ` (${o.discountCode})` : ""}: −${money(o.totals.discount)}` : "",
     `Delivery: ${o.fulfillment === "pickup" ? "Not applicable" : o.totals.delivery ? money(o.totals.delivery) : "On actuals"}`,
-    o.totals.packaging ? `Packaging & handling: ${money(o.totals.packaging)}` : "",
+    `Packaging & Handling Charges: ${money(o.totals.packaging || 0)}`,
     `GST: ${money(o.totals.tax)}`,
     `*To pay: ${money(o.totals.total)}* (${o.payment === "RAZORPAY" ? "Razorpay · paid online" : o.payment === "COD" ? `Cash on ${o.fulfillment === "pickup" ? "pickup" : "delivery"}` : o.payment})`,
     "",
