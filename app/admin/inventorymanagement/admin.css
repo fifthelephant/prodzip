@@ -30,7 +30,7 @@
 .admin-side-bottom { display: grid; grid-template-columns: 9px 1fr; gap: 8px; align-items: center; margin-top: auto; padding: 14px 8px; border-top: 1px solid rgba(255,255,255,.14); color: #cdb9a1; font-size: 10px; }
 .admin-online-dot { width: 7px; height: 7px; border-radius: 50%; background: #6bd28a; }
 .admin-side-bottom button { grid-column: 2; justify-self: start; padding: 4px 0; border: 0; background: none; color: #f0cf9d; cursor: pointer; font: inherit; font-size: 11px; }
-.admin-signout-mobile { display: none; }
+.admin-sidebar > button.admin-signout-mobile { display: none; }
 .admin-main { width: min(1420px, calc(100% - 248px)); margin: 0 auto; padding: 34px clamp(20px, 4vw, 58px) 60px; }
 .admin-top { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
 .admin-top h1 { font-size: clamp(30px, 4vw, 42px); }

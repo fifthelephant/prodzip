@@ -14,7 +14,23 @@ export const sameDay = (a: Date, b: Date) => startOfDay(a).getTime() === startOf
 export const fmtDay = (d: Date) => d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 export const fmtDate = (d: Date) => d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
 export const sameDayEarliest = (now: Date) => new Date(now.getTime() + STORE.sameDayPrepHours * 3600000);
-export const pastCutoff = (now: Date) => now.getHours() >= STORE.orderCutoffHour;
+
+/** Wall-clock time in India, even when the server clock is UTC. */
+export function asIst(now: Date): Date {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
+  return new Date(value("year"), value("month") - 1, value("day"), value("hour"), value("minute"), 0, 0);
+}
+
+export const pastCutoff = (now: Date) => asIst(now).getHours() >= STORE.orderCutoffHour;
 
 export const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -39,14 +55,14 @@ export function slotsOn(day: Date, earliest?: Date | null): string[] {
   return slotsBetween(day, STORE.openHour, STORE.closeHour, STORE.slotHours, earliest);
 }
 
-/** Open orders: hourly slots from 7:00–8:00 AM through 8:00–9:00 PM. */
+/** Open orders: hourly slots from 7:00–8:00 AM through 6:00–7:00 PM. */
 export function openOrderSlots(day: Date, earliest?: Date | null): string[] {
-  return slotsBetween(day, 7, 21, 1, earliest);
+  return slotsBetween(day, 7, 19, 1, earliest);
 }
 
 /** Earliest and latest calendar dates for an order that has no fixed thali day. */
 export function calendarRange(now: Date): { min: Date; max: Date } {
-  const today = startOfDay(now);
+  const today = startOfDay(asIst(now));
   const minDays = STORE.preorderMinDays + (pastCutoff(now) ? 1 : 0);
   return { min: addDays(today, minDays), max: addDays(today, 60) };
 }
@@ -61,6 +77,7 @@ export interface OrderWindow { deliver: Date; opens: Date; status: WindowStatus 
  */
 export function orderWindow(item: MenuItem, now: Date): OrderWindow | null {
   if (!item.deliveryDate) return null;
+  now = asIst(now);
   const deliver = parseDay(item.deliveryDate);
   const opens = item.orderFrom ? parseDay(item.orderFrom) : addDays(deliver, -STORE.thaliOrderDaysBefore);
   const today = startOfDay(now);
@@ -74,7 +91,7 @@ export function orderWindow(item: MenuItem, now: Date): OrderWindow | null {
 
 export const hasPrice = (item: MenuItem) => typeof item.price === "number";
 /** Seasonal items (the thalis) leave the menu after their visibleUntil date. */
-export const isRetired = (item: MenuItem, now: Date) => !!item.visibleUntil && startOfDay(now) > parseDay(item.visibleUntil);
+export const isRetired = (item: MenuItem, now: Date) => !!item.visibleUntil && startOfDay(asIst(now)) > parseDay(item.visibleUntil);
 export const orderable = (item: MenuItem | undefined, now: Date): boolean =>
   !!item && !isRetired(item, now) && !item.soldOut && hasPrice(item) &&
   (!item.deliveryDate || orderWindow(item, now)!.status === "open");
@@ -109,6 +126,7 @@ export interface DeliveryPlan {
  * customer picks a date from the calendar.
  */
 export function deliveryPlan(cart: CartLine[], items: Record<string, MenuItem>, now: Date): DeliveryPlan {
+  now = asIst(now);
   const lines = cart.map((l) => items[l.id]).filter(Boolean);
   const fixed = [...new Set(lines.map((i) => i.deliveryDate).filter(Boolean))] as string[];
   if (fixed.length > 1) {

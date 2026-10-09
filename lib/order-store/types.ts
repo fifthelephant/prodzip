@@ -139,7 +139,7 @@ export interface PaymentSettings {
   cod: boolean;
 }
 
-export const DEFAULT_PAYMENTS: PaymentSettings = { razorpay: false, cod: true };
+export const DEFAULT_PAYMENTS: PaymentSettings = { razorpay: true, cod: false };
 
 /** Packaging and handling, taken as a percent of the item total and capped. */
 export interface ChargeSettings {

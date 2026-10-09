@@ -44,3 +44,11 @@ export function resolveDeliveryZone(address: Address | null | undefined, fulfill
   if (fulfillment === "pickup" || !address?.ok) return "unknown";
   return address.zone || detectDeliveryZone(null, address.text);
 }
+
+/** The on-actuals note is only for Delhi, Noida and Greater Noida, never Gurugram. */
+export function showsDeliveryActualsNote(address: Address | null | undefined, fulfillment: FulfillmentMode): boolean {
+  if (fulfillment !== "delivery" || !address?.ok) return false;
+  const text = (address.text || "").toLowerCase();
+  if (text.includes("gurugram") || text.includes("gurgaon")) return false;
+  return text.includes("greater noida") || text.includes("noida") || text.includes("delhi");
+}

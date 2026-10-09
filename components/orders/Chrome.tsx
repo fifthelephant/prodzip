@@ -66,7 +66,7 @@ export function Drawer() {
         </nav>
         <div className="drawer-info" id="drawerInfo">
           <p>🛵 Pre-orders · delivery and pickup / takeaway</p>
-          <p>🕘 Delivery slots from {hourLabel(STORE.openHour)} · order by {hourLabel(STORE.orderCutoffHour)} for next-day delivery</p>
+          <p>🕘 Delivery slots from 7 AM to 7 PM · orders after {hourLabel(STORE.orderCutoffHour)} are for the next day</p>
           <p>📞 <a href={`tel:${STORE.phone.replace(/\s/g, "")}`}>{STORE.phone}</a></p>
           <p>💬 <a href={`https://wa.me/${STORE.whatsappNumber}`} target="_blank" rel="noopener">Chat on WhatsApp</a></p>
         </div>

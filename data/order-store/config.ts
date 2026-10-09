@@ -35,8 +35,8 @@ export const STORE: StoreConfig = {
   // Pre-order delivery slots
   preorderMinDays: 1,       // earliest delivery day: 1 = tomorrow, 2 = day after…
   preorderMaxDays: 7,       // how many days ahead customers can choose
-  orderCutoffHour: 18,      // orders placed at/after 6 PM skip one more day
-                            // (after 6 PM today → earliest is the day after tomorrow)
+  orderCutoffHour: 19,      // orders placed at/after 7 PM IST skip one more day
+                            // (after 7 PM IST today → earliest is the day after tomorrow)
   // Items with a fixed delivery day (the Navratri thalis): they can be ordered
   // from this many days before their day, up to the day itself as long as a
   // delivery slot is still at least sameDayPrepHours away.

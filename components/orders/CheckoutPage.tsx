@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { STORE } from "@/data/order-store/config";
-import { resolveDeliveryZone } from "@/lib/order-store/area";
+import { resolveDeliveryZone, showsDeliveryActualsNote } from "@/lib/order-store/area";
 import { hourLabel, money } from "@/lib/order-store/format";
 import { sendOrder } from "@/lib/order-store/order";
 import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
@@ -34,7 +34,7 @@ function CheckoutForm() {
     house: customer.house || "", landmark: customer.landmark || "", notes: ""
   }));
   const [showNotes, setShowNotes] = useState(false);
-  const [payment, setPayment] = useState<"RAZORPAY" | "COD">("COD");
+  const [payment, setPayment] = useState<"RAZORPAY" | "COD">("RAZORPAY");
   useEffect(() => {
     if (payment === "COD" && !payments.cod && payments.razorpay) setPayment("RAZORPAY");
     if (payment === "RAZORPAY" && !payments.razorpay && payments.cod) setPayment("COD");
@@ -51,7 +51,7 @@ function CheckoutForm() {
 
   const zone = resolveDeliveryZone(address, fulfillmentMode);
   const t = totals(cart, catalog.items, fulfillmentMode, zone, undefined, charges);
-  const showActualsNote = fulfillmentMode === "delivery";
+  const showActualsNote = showsDeliveryActualsNote(address, fulfillmentMode);
   const plan = useMemo(() => deliveryPlan(cart, catalog.items, now), [cart, catalog.items, now]);
   const days = useMemo(() => buildSlots(plan), [plan]);
   const range = useMemo(() => calendarRange(now), [now]);
@@ -263,9 +263,9 @@ function CheckoutForm() {
           {plan.fixed ? (
               <p className="hint thali-hint">🍱 Your Navratri thali is on <b>{fmtDay(plan.fixed)}</b>. Halwa and any other items in this order are delivered the same day. Pick a time slot.</p>
           ) : (
-            <p className="hint">
-              Choose the date from the calendar. The earliest is {fmtDay(range.min)}.
-              {pastCutoff(now) ? ` Today's ${hourLabel(STORE.orderCutoffHour)} cut-off has passed, so that date is one day later.` : ""}
+            <p className="cutoff-note">
+              The last delivery is 6:00–7:00 PM. After 7:00 PM we take the order for the next day only.
+              {pastCutoff(now) ? ` Today's 7:00 PM cut-off has passed, so the earliest date is ${fmtDay(range.min)}.` : ` The earliest date is ${fmtDay(range.min)}.`}
             </p>
           )}
           {plan.calendar ? (

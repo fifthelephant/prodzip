@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { STORE } from "@/data/order-store/config";
 import { money } from "@/lib/order-store/format";
-import { resolveDeliveryZone } from "@/lib/order-store/area";
+import { resolveDeliveryZone, showsDeliveryActualsNote } from "@/lib/order-store/area";
 import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
 import { deliveryPlan, fmtDay } from "@/lib/order-store/schedule";
 import { Bill, Loading, VegMark } from "./bits";
@@ -69,7 +69,7 @@ export default function CartPage() {
         })}
         <p><Link href="/orders/" className="link-btn">+ ADD MORE ITEMS</Link></p>
         <Bill t={t} fulfillment={fulfillmentMode} zone={zone} />
-        {fulfillmentMode === "delivery" ? <p className="delivery-actuals-note">Delivery Charges are Extra and to be paid on actuals by Customer</p> : null}
+        {showsDeliveryActualsNote(address, fulfillmentMode) ? <p className="delivery-actuals-note">Delivery Charges are Extra and to be paid on actuals by Customer</p> : null}
         {fulfillmentMode === "delivery" && t.belowMin ? <p className="note">Minimum order for delivery is {money(STORE.minOrder)}.</p> : null}
         {plan.error ? (
           <p className="notice" role="alert">{plan.error}</p>
