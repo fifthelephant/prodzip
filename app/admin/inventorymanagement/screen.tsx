@@ -10,7 +10,7 @@ const blankItem = (): ItemForm => ({ id: "", name: "", category: "", description
 const blankDiscount = (): DiscountForm => ({ code: "", type: "percent", value: 10, minimum_subtotal: 0, active: true, starts_at: "", ends_at: "", item_ids: "", category_ids: "", max_uses: null, uses: 0 });
 
 function imageUrl(value: string) {
-  return /^(https?:|data:|\/\/|\/menu-image\/)/i.test(value) ? value : asset(value);
+  return asset(value);
 }
 
 function InventoryPhoto({ src, emoji }: { src: string; emoji: string }) {

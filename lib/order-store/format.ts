@@ -8,8 +8,9 @@ export const slug = (s: string) => String(s).toLowerCase().replace(/[^a-z0-9]+/g
 /** Site path, honouring the deploy's basePath (e.g. "/Ordering" on GitHub Pages). */
 export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
-/** Photo paths in the menu/Sheet are written like "images/x.webp"; make them work on every page. */
+/** Photo paths may be root-relative public URLs or menu paths like "images/x.webp". */
 export function asset(src: string): string {
-  if (/^(https?:|data:|\/\/|\/menu-image\/)/.test(src)) return src;
+  if (/^(https?:|data:|\/\/)/i.test(src)) return src;
+  if (src.startsWith("/")) return `${BASE_PATH}${src}`;
   return `${BASE_PATH}/orders/${src.replace(/^\/+/, "")}`;
 }
