@@ -25,7 +25,7 @@ export default function CheckoutPage() {
 
 function CheckoutForm() {
   const shop = useShop();
-  const { cart, catalog, discounts, now: shopNow, address, openAddress, customer, setCustomer,
+  const { cart, catalog, discounts, payments, now: shopNow, address, openAddress, customer, setCustomer,
     fulfillmentMode, toast, applyInventory, setCartNotice, clearCart, refreshInventory, checkoutOrderId, resetCheckoutOrderId } = shop;
   const router = useRouter();
 
@@ -38,7 +38,11 @@ function CheckoutForm() {
   const [discountCode, setDiscountCode] = useState("");
   const [appliedCode, setAppliedCode] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
-  const payment = "RAZORPAY" as const;
+  const [payment, setPayment] = useState<"RAZORPAY" | "COD">("COD");
+  useEffect(() => {
+    if (payment === "COD" && !payments.cod && payments.razorpay) setPayment("RAZORPAY");
+    if (payment === "RAZORPAY" && !payments.razorpay && payments.cod) setPayment("COD");
+  }, [payment, payments]);
   const [dayIdx, setDayIdx] = useState(0);
   const [slot, setSlot] = useState("");
   const [bad, setBad] = useState<Partial<Record<Field, boolean>>>({});
@@ -87,6 +91,8 @@ function CheckoutForm() {
     const firstBad = (Object.keys(checks) as Field[]).find((k) => !checks[k]);
     if (firstBad) { fieldRefs.current[firstBad]?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
     if (!days.length) { toast("No slots available right now. Please call us to order."); return; }
+    if (!payments.cod && !payments.razorpay) { toast("Ordering is paused. Please call us to place this order."); return; }
+    if ((payment === "COD" && !payments.cod) || (payment === "RAZORPAY" && !payments.razorpay)) { toast("That payment method is not available. Please choose another one."); return; }
 
     // The 6 PM cut-off (or a same-day slot) may have passed while the form was being filled.
     const chosen = days[dayI];
@@ -233,7 +239,8 @@ function CheckoutForm() {
     router.push(`/orders/order/?id=${encodeURIComponent(id)}`);
   }
 
-  const payLabel = placing ? "Processing…" : payment === "RAZORPAY" ? "Pay Securely" : "Place pre-order";
+  const payLabel = placing ? "Processing…" : payment === "RAZORPAY" ? "Pay securely with Razorpay" : fulfillmentMode === "pickup" ? "Place order · cash on pickup" : "Place order · cash on delivery";
+  const cashLabel = fulfillmentMode === "pickup" ? "Cash on pickup" : "Cash on delivery";
 
   return (
     <>
@@ -313,9 +320,10 @@ function CheckoutForm() {
         </div>
         <div className="field">
           <span className="lbl">Payment <span className="req">*</span></span>
-          <div className="pay-opts">
-            <label><input type="radio" name="pay" value="RAZORPAY" checked onChange={() => {}} /> Pay Online</label>
-          </div>
+          {payments.cod || payments.razorpay ? <div className="pay-opts">
+            {payments.cod ? <label><input type="radio" name="pay" value="COD" checked={payment === "COD"} onChange={() => setPayment("COD")} /> {cashLabel}<small>Pay in cash when you {fulfillmentMode === "pickup" ? "collect" : "receive"} the order.</small></label> : null}
+            {payments.razorpay ? <label><input type="radio" name="pay" value="RAZORPAY" checked={payment === "RAZORPAY"} onChange={() => setPayment("RAZORPAY")} /> Pay online with Razorpay<small>Card, UPI or netbanking. Paid before the order is confirmed.</small></label> : null}
+          </div> : <p className="hint">Ordering is paused. Please call us to place this order.</p>}
         </div>
         <Bill t={t} fulfillment={fulfillmentMode} zone={zone} />
       </form>
@@ -325,7 +333,7 @@ function CheckoutForm() {
             <p className="delivery-actuals-note">Delivery charges are extra and on actuals to be paid by customer</p>
           ) : null}
           <div className="topay"><span>To Pay</span><span>{money(t.total)}</span></div>
-          <button className="btn primary block" id="payNow" type="submit" form="checkoutForm" disabled={placing}>{payLabel}</button>
+          <button className="btn primary block" id="payNow" type="submit" form="checkoutForm" disabled={placing || (!payments.cod && !payments.razorpay)}>{payLabel}</button>
         </div>
       </div>
     </>

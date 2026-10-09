@@ -295,10 +295,11 @@
 .ordering-app .lbl-row { display: flex; justify-content: space-between; align-items: center; }
 .ordering-app .pay-opts { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .ordering-app .pay-opts label {
-  display: flex; justify-content: flex-start; gap: 10px; align-items: center;
-  width: fit-content; max-width: 100%;
+  display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 10px; align-items: center;
+  width: 100%; max-width: 100%;
   padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; font-size: .9rem;
 }
+.ordering-app .pay-opts label small { flex-basis: 100%; margin: 0 0 0 24px; color: var(--muted); font-size: .78rem; line-height: 1.4; }
 .ordering-app .pay-opts input { accent-color: var(--primary); }
 .ordering-app .toggle-more { width: 100%; text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 11px 12px; color: var(--muted); }
 

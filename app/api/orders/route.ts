@@ -5,6 +5,7 @@ import { detectDeliveryZone } from "@/lib/order-store/area";
 import { buildCatalog } from "@/lib/order-store/catalog";
 import { discountForCode, totals, unitPrice } from "@/lib/order-store/pricing";
 import { readCsvStore, withCsvStore } from "@/lib/order-store/csv-store";
+import { customerPayments } from "@/lib/order-store/payments";
 import type { CartLine, Order } from "@/lib/order-store/types";
 
 export const runtime = "nodejs";
@@ -26,8 +27,8 @@ function validPaymentProof(proof: string | undefined, orderId: string, amount: n
 
 export async function GET() {
   try {
-    const { items, discounts } = await readCsvStore();
-    return NextResponse.json({ ok: true, items, discounts }, { headers: { "Cache-Control": "no-store" } });
+    const store = await readCsvStore();
+    return NextResponse.json({ ok: true, items: store.items, discounts: store.discounts, payments: customerPayments(store.payments) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Menu data is unavailable." }, { status: 503 });
   }
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
   if (!body || typeof body.id !== "string" || !/^MK[A-Za-z0-9_-]{4,60}$/.test(body.id) || !Array.isArray(body.items) || !body.items.length || body.items.length > 40) {
     return NextResponse.json({ ok: false, error: "Invalid order details." }, { status: 400 });
   }
-  if (!["COD", "UPI", "RAZORPAY"].includes(body.payment)) return NextResponse.json({ ok: false, error: "Invalid payment method." }, { status: 400 });
+  if (body.payment !== "COD" && body.payment !== "RAZORPAY") return NextResponse.json({ ok: false, error: "Invalid payment method." }, { status: 400 });
   try {
     const result = await withCsvStore((store) => {
       const existing = store.orders.find((order) => order.id === body.id);
@@ -68,7 +69,8 @@ export async function POST(request: Request) {
         lines.push({ id: item.id, qty, key: item.id, sel: selection });
       }
       const fulfillment = body.fulfillment === "pickup" ? "pickup" : "delivery";
-      const zone = fulfillment === "delivery" ? detectDeliveryZone(null, body.address?.line || "") : "unknown";
+      const addressText = [body.address?.line, body.address?.landmark, body.address?.map].filter(Boolean).join(", ");
+      const zone = fulfillment === "delivery" ? detectDeliveryZone(null, addressText) : "unknown";
       const discount = discountForCode(body.discountCode || "", store.discounts);
       const pricing = totals(lines, items, fulfillment, zone, discount);
       if (discount && pricing.discount <= 0) return { ok: false, error: "That discount code is invalid or no longer applies to this order.", items: store.items };
@@ -77,6 +79,9 @@ export async function POST(request: Request) {
       const supplied = body.totals;
       if (!supplied || supplied.sub !== pricing.sub || supplied.discount !== pricing.discount || supplied.tax !== pricing.tax || supplied.total !== pricing.total) {
         return { ok: false, error: "Your order total changed. Please review checkout and try again.", items: store.items };
+      }
+      if (body.payment === "COD" && !store.payments.cod) {
+        return { ok: false, error: "Cash on delivery is not available right now.", items: store.items };
       }
       if (body.payment === "RAZORPAY" && !validPaymentProof(envelope?.paymentProof, body.id, Math.round(pricing.total * 100))) {
         return { ok: false, error: "We could not confirm your online payment. Please contact us before placing the order again.", items: store.items };

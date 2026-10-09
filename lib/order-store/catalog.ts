@@ -53,7 +53,7 @@ export function buildCatalog(inventory: InventoryRow[] | null): Catalog {
         badge: row.badge || b.badge || "",
         shelfLife: row.shelf_life || b.shelfLife || "",
         // The Sheet's image column can hold one link or several, separated by commas.
-        images: row.image ? row.image.split(/[\s,]+/).filter(Boolean) : b.images,
+        images: row.image ? row.image.split(",").map((part) => part.trim()).filter(Boolean) : b.images,
         emoji: row.emoji || b.emoji || "🍬",
         veg: typeof row.veg === "boolean" ? row.veg : b.veg,
         options,

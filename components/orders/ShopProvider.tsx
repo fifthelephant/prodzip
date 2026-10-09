@@ -10,11 +10,11 @@ import { STORE } from "@/data/order-store/config";
 import { buildCatalog, itemHref, type Catalog } from "@/lib/order-store/catalog";
 import { hasStockLimit, qtyOfItem, reconcileCart, roomFor as roomForPure } from "@/lib/order-store/cart";
 import { isFiltering, matches, NO_FILTERS, type Filters } from "@/lib/order-store/filters";
-import { fetchInventory, newOrderId } from "@/lib/order-store/order";
+import { DEFAULT_PAYMENTS, fetchInventory, newOrderId } from "@/lib/order-store/order";
 import { lineKey } from "@/lib/order-store/pricing";
 import { blockedLabel, isRetired } from "@/lib/order-store/schedule";
 import { load, save } from "@/lib/order-store/storage";
-import type { Address, CartLine, Customer, DiscountRule, FulfillmentMode, InventoryRow } from "@/lib/order-store/types";
+import type { Address, CartLine, Customer, DiscountRule, FulfillmentMode, InventoryRow, PaymentSettings } from "@/lib/order-store/types";
 
 export { NO_FILTERS, type Filters };
 
@@ -28,6 +28,7 @@ interface ShopContext {
   now: Date;
   catalog: Catalog;
   discounts: DiscountRule[];
+  payments: PaymentSettings;
   cart: CartLine[];
   cartCount: number;
   bump: number;
@@ -98,6 +99,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const [now, setNow] = useState(() => new Date());
   const [catalog, setCatalog] = useState<Catalog>(EMPTY_CATALOG);
   const [discounts, setDiscounts] = useState<DiscountRule[]>([]);
+  const [payments, setPayments] = useState<PaymentSettings>(DEFAULT_PAYMENTS);
   const [cart, setCartState] = useState<CartLine[]>([]);
   const [address, setAddressState] = useState<Address | null>(null);
   const [fulfillmentMode, setFulfillmentModeState] = useState<FulfillmentMode>("delivery");
@@ -156,10 +158,12 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const refreshInventory = useCallback((): Promise<void> => {
     if (refreshing.current) return refreshing.current;
     refreshing.current = (async () => {
-      const before = JSON.stringify({ items: load<InventoryRow[] | null>("inventory", null), discounts: load<DiscountRule[]>("discounts", []) });
+      const before = JSON.stringify({ items: load<InventoryRow[] | null>("inventory", null), discounts: load<DiscountRule[]>("discounts", []), payments: load<PaymentSettings>("payments", DEFAULT_PAYMENTS) });
       try {
         const data = await fetchInventory();
         setInventoryFailed(false);
+        setPayments(data.payments);
+        save("payments", data.payments);
         if (JSON.stringify(data) === before && catalogRef.current.categories.length) return;
         const notes = applyInventory(data.items);
         setDiscounts(data.discounts);
@@ -199,6 +203,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     if (Array.isArray(cached)) {
       setCatalogBoth(buildCatalog(cached));
       setDiscounts(load<DiscountRule[]>("discounts", []));
+      setPayments(load<PaymentSettings>("payments", DEFAULT_PAYMENTS));
       setReady(true);
     }
     refreshInventory();
@@ -320,7 +325,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const retryInventory = useCallback(() => { setInventoryFailed(false); refreshInventory(); }, [refreshInventory]);
 
   const value = useMemo<ShopContext>(() => ({
-    ready, inventoryFailed, retryInventory, now, catalog, discounts, cart,
+    ready, inventoryFailed, retryInventory, now, catalog, discounts, payments, cart,
     cartCount: cart.reduce((a, l) => a + l.qty, 0), bump,
     qtyOf: (id) => qtyOfItem(cart, id), roomFor, addToCart, setQty, clearCart,
     address, setAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, setCartNotice,
@@ -328,7 +333,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     addressOpen, openAddress, closeAddress, drawerOpen, setDrawerOpen,
     filters, setFilters, searchText, setSearchText, collapsed, setCollapsed, showSearch, setShowSearch, showFilters, setShowFilters,
     getMenuScroll, saveMenuScroll, takePendingJump, jumpTick, jumpTo, checkoutOrderId, resetCheckoutOrderId
-  }), [ready, inventoryFailed, retryInventory, now, catalog, discounts, cart, bump, roomFor, addToCart, setQty, clearCart,
+  }), [ready, inventoryFailed, retryInventory, now, catalog, discounts, payments, cart, bump, roomFor, addToCart, setQty, clearCart,
     address, setAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, applyInventory, refreshInventory, toast, toastState,
     addressOpen, openAddress, closeAddress, drawerOpen, setDrawerOpen, filters, searchText, collapsed, showSearch, showFilters,
     getMenuScroll, saveMenuScroll, takePendingJump, jumpTick, jumpTo, checkoutOrderId, resetCheckoutOrderId]);

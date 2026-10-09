@@ -132,6 +132,14 @@ export interface Totals {
 
 export type FulfillmentMode = "delivery" | "pickup";
 
+/** Which checkout methods the shop is offering. Razorpay also needs API keys. */
+export interface PaymentSettings {
+  razorpay: boolean;
+  cod: boolean;
+}
+
+export const DEFAULT_PAYMENTS: PaymentSettings = { razorpay: false, cod: true };
+
 export interface Order {
   id: string;
   placedAt: string;

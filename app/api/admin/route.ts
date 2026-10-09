@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { hasAdminSession, sameOrigin } from "@/lib/admin/auth";
 import { readCsvStore, saveImageData, withCsvStore } from "@/lib/order-store/csv-store";
-import type { DiscountRule, InventoryRow } from "@/lib/order-store/types";
+import { razorpayKeysConfigured } from "@/lib/order-store/payments";
+import type { DiscountRule, InventoryRow, PaymentSettings } from "@/lib/order-store/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   if (!await hasAdminSession()) return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
-  try { return NextResponse.json(await readCsvStore(), { headers: { "Cache-Control": "no-store" } }); }
+  try {
+    const store = await readCsvStore();
+    return NextResponse.json({ ...store, razorpayConfigured: razorpayKeysConfigured() }, { headers: { "Cache-Control": "no-store" } });
+  }
   catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not load inventory." }, { status: 503 }); }
 }
 
@@ -19,11 +23,11 @@ export async function POST(request: Request) {
   if (size > 5_000_000) return NextResponse.json({ error: "The upload is too large. Choose an image under 3 MB." }, { status: 413 });
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   if (!body || typeof body.operation !== "string") return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  if (!["save-item", "delete-item", "save-discount", "delete-discount", "upload-image"].includes(body.operation)) return NextResponse.json({ error: "Unsupported inventory action." }, { status: 400 });
+  if (!["save-item", "delete-item", "save-discount", "delete-discount", "upload-image", "save-payments"].includes(body.operation)) return NextResponse.json({ error: "Unsupported inventory action." }, { status: 400 });
   try {
     if (body.operation === "upload-image") {
       if (typeof body.name !== "string" || typeof body.data !== "string") throw new Error("Choose an image file.");
-      return NextResponse.json({ ok: true, url: await saveImageData(body.name, body.data) });
+      return NextResponse.json({ ok: true, url: await saveImageData(body.name, body.data, typeof body.mimeType === "string" ? body.mimeType : undefined) });
     }
     const result = await withCsvStore((store) => {
       if (body.operation === "save-item") {
@@ -48,9 +52,15 @@ export async function POST(request: Request) {
         if (index < 0) store.discounts.push(normalized); else store.discounts[index] = normalized;
       } else if (body.operation === "delete-discount") {
         store.discounts = store.discounts.filter((rule) => rule.code.toUpperCase() !== String(body.code || "").toUpperCase());
+      } else if (body.operation === "save-payments") {
+        const incoming = body.payments as Partial<PaymentSettings> | undefined;
+        const next = { razorpay: incoming?.razorpay === true, cod: incoming?.cod === true };
+        if (!next.cod && !(next.razorpay && razorpayKeysConfigured())) throw new Error("Keep cash on delivery on until Razorpay keys are on the server and Razorpay is switched on.");
+        if (!next.razorpay && !next.cod) throw new Error("Keep at least one payment method available.");
+        store.payments = next;
       }
-      return { ok: true, items: store.items, discounts: store.discounts };
+      return { ok: true, items: store.items, discounts: store.discounts, payments: store.payments };
     });
-    return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ...result, razorpayConfigured: razorpayKeysConfigured() }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not save changes." }, { status: 503 }); }
 }

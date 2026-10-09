@@ -33,7 +33,7 @@ export default function OrderPage() {
       <p className="sub">Order ID <strong>{o.id}</strong><br />{o.fulfillment === "pickup" ? "Pickup" : "Delivery"} on {o.slot}{o.customer.email ? <><br />Confirmation email: {o.customer.email}</> : null}</p>
       <div className="actions">
         <a className="btn green block" href={whatsappLink(o)} target="_blank" rel="noopener">Confirm order on WhatsApp</a>
-        {o.payment === "RAZORPAY" ? <p className="upi">Payment completed securely with Razorpay.</p> : null}
+        {o.payment === "RAZORPAY" ? <p className="upi">Payment completed securely with Razorpay.</p> : o.payment === "COD" ? <p className="upi">Please keep cash ready. You pay when the order is {o.fulfillment === "pickup" ? "picked up" : "delivered"}.</p> : null}
         {upi ? <a className="btn primary block" href={upiLink(o)}>Pay {money(o.totals.total)} with UPI</a> : null}
       </div>
       {upi ? (

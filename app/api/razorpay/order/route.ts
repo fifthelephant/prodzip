@@ -5,6 +5,7 @@ import { buildCatalog } from "@/lib/order-store/catalog";
 import { discountForCode, totals, unitPrice } from "@/lib/order-store/pricing";
 import type { CartLine, DiscountRule, InventoryRow } from "@/lib/order-store/types";
 import { readCsvStore } from "@/lib/order-store/csv-store";
+import { customerPayments } from "@/lib/order-store/payments";
 
 export const runtime = "nodejs";
 
@@ -36,6 +37,9 @@ export async function POST(request: Request) {
   let discounts: DiscountRule[];
   try {
     const store = await readCsvStore();
+    if (!customerPayments(store.payments).razorpay) {
+      return NextResponse.json({ error: "Online payment is not available right now." }, { status: 503 });
+    }
     inventory = store.items;
     discounts = store.discounts;
   } catch {

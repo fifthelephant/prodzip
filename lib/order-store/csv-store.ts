@@ -2,12 +2,13 @@ import { mkdir, readFile, rename, stat, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { MENU } from "@/data/order-store/menu";
-import type { DiscountRule, InventoryRow, Order } from "@/lib/order-store/types";
+import { DEFAULT_PAYMENTS, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "@/lib/order-store/types";
 
 export interface CsvStore {
   items: InventoryRow[];
   discounts: DiscountRule[];
   orders: Order[];
+  payments: PaymentSettings;
 }
 
 const seedDirectory = path.join(process.cwd(), "data");
@@ -15,6 +16,7 @@ const dataDirectory = process.env.MK_DATA_DIR?.trim() ? path.resolve(process.env
 const inventoryPath = path.join(dataDirectory, "inventory.csv");
 const discountsPath = path.join(dataDirectory, "discounts.csv");
 const ordersPath = path.join(dataDirectory, "orders.csv");
+const paymentsPath = path.join(dataDirectory, "payment-settings.csv");
 const lockPath = path.join(dataDirectory, ".csv-store.lock");
 
 const INVENTORY_COLUMNS: (keyof InventoryRow)[] = [
@@ -25,6 +27,7 @@ const DISCOUNT_COLUMNS: (keyof DiscountRule)[] = [
   "code", "type", "value", "minimum_subtotal", "active", "starts_at", "ends_at", "item_ids", "category_ids", "max_uses", "uses",
 ];
 const ORDER_COLUMNS: (keyof Order)[] = ["id", "placedAt", "slot", "payment", "fulfillment", "customer", "address", "items", "notes", "discountCode", "totals"];
+const PAYMENT_COLUMNS: (keyof PaymentSettings)[] = ["razorpay", "cod"];
 
 function csvCell(value: unknown): string {
   const text = value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -76,11 +79,22 @@ function discountsFromCsv(text: string): DiscountRule[] {
   }));
 }
 
+function parseJson<T>(value: string, fallback: T): T {
+  if (!value) return fallback;
+  try { return JSON.parse(value) as T; } catch { return fallback; }
+}
+
+function paymentsFromCsv(text: string): PaymentSettings {
+  const [row] = parseCsv(text);
+  if (!row) return { ...DEFAULT_PAYMENTS };
+  return { razorpay: parseBoolean(row.razorpay), cod: row.cod === "" ? true : parseBoolean(row.cod) };
+}
+
 function ordersFromCsv(text: string): Order[] {
   return parseCsv(text).map((r) => ({
-    id: r.id, placedAt: r.placedAt, slot: r.slot, payment: r.payment as Order["payment"], fulfillment: r.fulfillment as Order["fulfillment"],
-    customer: JSON.parse(r.customer || "{}"), address: JSON.parse(r.address || "{}"), items: JSON.parse(r.items || "[]"), notes: r.notes,
-    discountCode: r.discountCode, totals: JSON.parse(r.totals || "{}"),
+    id: r.id, placedAt: r.placedAt, slot: r.slot, payment: r.payment as Order["payment"], fulfillment: r.fulfillment === "pickup" ? "pickup" : "delivery",
+    customer: parseJson(r.customer, { name: "", email: "", phone: "" }), address: parseJson(r.address, { line: "", map: "", lat: null, lng: null }),
+    items: parseJson(r.items, []), notes: r.notes, discountCode: r.discountCode, totals: parseJson(r.totals, { sub: 0, discount: 0, delivery: 0, tax: 0, total: 0 }),
   }));
 }
 
@@ -115,14 +129,17 @@ async function ensureFiles() {
     try { await writeFile(ordersPath, await readFile(path.join(seedDirectory, "starter-orders.csv"))); }
     catch { await writeAtomic(ordersPath, toCsv([], ORDER_COLUMNS)); }
   }
+  try { await stat(paymentsPath); } catch {
+    await writeAtomic(paymentsPath, toCsv([DEFAULT_PAYMENTS], PAYMENT_COLUMNS));
+  }
 }
 
 async function readUnlocked(): Promise<CsvStore> {
   await ensureFiles();
-  const [inventoryCsv, discountsCsv, ordersCsv] = await Promise.all([
-    readFile(inventoryPath, "utf8"), readFile(discountsPath, "utf8"), readFile(ordersPath, "utf8"),
+  const [inventoryCsv, discountsCsv, ordersCsv, paymentsCsv] = await Promise.all([
+    readFile(inventoryPath, "utf8"), readFile(discountsPath, "utf8"), readFile(ordersPath, "utf8"), readFile(paymentsPath, "utf8"),
   ]);
-  return { items: inventoryFromCsv(inventoryCsv), discounts: discountsFromCsv(discountsCsv), orders: ordersFromCsv(ordersCsv) };
+  return { items: inventoryFromCsv(inventoryCsv), discounts: discountsFromCsv(discountsCsv), orders: ordersFromCsv(ordersCsv), payments: paymentsFromCsv(paymentsCsv) };
 }
 
 async function acquireLock() {
@@ -148,6 +165,7 @@ export async function withCsvStore<T>(work: (store: CsvStore) => Promise<T> | T)
       writeAtomic(inventoryPath, toCsv(store.items, INVENTORY_COLUMNS)),
       writeAtomic(discountsPath, toCsv(store.discounts, DISCOUNT_COLUMNS)),
       writeAtomic(ordersPath, toCsv(store.orders, ORDER_COLUMNS)),
+      writeAtomic(paymentsPath, toCsv([store.payments], PAYMENT_COLUMNS)),
     ]);
     return result;
   } finally { await rm(lockPath, { recursive: true, force: true }); }
@@ -159,13 +177,26 @@ export async function readCsvStore(): Promise<CsvStore> {
   finally { await rm(lockPath, { recursive: true, force: true }); }
 }
 
-export function saveImageData(name: string, dataUrl: string): Promise<string> {
+function imagePayload(data: string, mimeType?: string) {
+  const dataUrl = /^data:(image\/(?:webp|png|jpe?g));base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(data.trim());
+  const mime = (dataUrl?.[1] || mimeType || "image/webp").toLowerCase();
+  const payload = (dataUrl?.[2] || data).replace(/\s/g, "");
+  const extension = mime === "image/png" ? "png" : mime === "image/jpeg" || mime === "image/jpg" ? "jpg" : mime === "image/webp" ? "webp" : "";
+  if (!extension || !payload || !/^[A-Za-z0-9+/=]+$/.test(payload)) throw new Error("Choose a valid image file.");
+  const bytes = Buffer.from(payload, "base64");
+  if (!bytes.byteLength || bytes.byteLength > 3_000_000) throw new Error("Choose an image under 3 MB.");
+  const signatureOk = extension === "png"
+    ? bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    : extension === "jpg"
+      ? bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+      : bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP";
+  if (!signatureOk) throw new Error("Choose a valid image file.");
+  return { bytes, extension };
+}
+
+export function saveImageData(name: string, data: string, mimeType?: string): Promise<string> {
   return (async () => {
-    const match = dataUrl.match(/^data:image\/(webp|png|jpeg);base64,([A-Za-z0-9+/=]+)$/);
-    if (!match) throw new Error("Choose a valid image file.");
-    const bytes = Buffer.from(match[2], "base64");
-    if (bytes.byteLength > 3_000_000) throw new Error("Choose an image under 3 MB.");
-    const extension = match[1] === "jpeg" ? "jpg" : match[1];
+    const { bytes, extension } = imagePayload(data, mimeType);
     const safeBase = path.basename(name, path.extname(name)).replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 60) || "menu-image";
     const filename = `${safeBase}-${randomUUID()}.${extension}`;
     const directory = process.env.MK_UPLOAD_DIR?.trim() ? path.resolve(process.env.MK_UPLOAD_DIR.trim()) : path.join(process.cwd(), "public", "uploads", "menu");
@@ -181,5 +212,6 @@ export async function writeStoreRows(store: CsvStore) {
     writeAtomic(inventoryPath, toCsv(store.items, INVENTORY_COLUMNS)),
     writeAtomic(discountsPath, toCsv(store.discounts, DISCOUNT_COLUMNS)),
     writeAtomic(ordersPath, toCsv(store.orders, ORDER_COLUMNS)),
+    writeAtomic(paymentsPath, toCsv([store.payments], PAYMENT_COLUMNS)),
   ]);
 }

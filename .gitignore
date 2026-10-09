@@ -11,6 +11,7 @@ out
 data/inventory.csv
 data/discounts.csv
 data/orders.csv
+data/payment-settings.csv
 data/.csv-store.lock/
 public/uploads/menu/
 ordering-source/
