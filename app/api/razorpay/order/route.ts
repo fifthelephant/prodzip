@@ -3,7 +3,7 @@ import { STORE } from "@/data/order-store/config";
 import { detectDeliveryZone } from "@/lib/order-store/area";
 import { buildCatalog } from "@/lib/order-store/catalog";
 import { discountForCode, totals, unitPrice } from "@/lib/order-store/pricing";
-import type { CartLine, DiscountRule, InventoryRow } from "@/lib/order-store/types";
+import type { CartLine, ChargeSettings, DiscountRule, InventoryRow } from "@/lib/order-store/types";
 import { readCsvStore } from "@/lib/order-store/csv-store";
 import { customerPayments } from "@/lib/order-store/payments";
 
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
 
   let inventory: InventoryRow[];
   let discounts: DiscountRule[];
+  let charges: ChargeSettings;
   try {
     const store = await readCsvStore();
     if (!customerPayments(store.payments).razorpay) {
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     }
     inventory = store.items;
     discounts = store.discounts;
+    charges = store.charges;
   } catch {
     return NextResponse.json({ error: "We couldn't verify the live menu. Please try again." }, { status: 503 });
   }
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
     ? (zoneFromText !== "unknown" ? zoneFromText : body.zone === "gurugram" || body.zone === "actuals" ? body.zone : "unknown")
     : "unknown";
   const discount = discountForCode(typeof body.discountCode === "string" ? body.discountCode : "", discounts);
-  const priced = totals(body.lines, items, fulfillment, zone, discount);
+  const priced = totals(body.lines, items, fulfillment, zone, discount, charges);
   if (body.discountCode && !priced.discount) return NextResponse.json({ error: "That discount code is invalid or no longer applies to this order." }, { status: 400 });
   const amount = Math.round(priced.total * 100);
 

@@ -25,7 +25,7 @@ export default function CheckoutPage() {
 
 function CheckoutForm() {
   const shop = useShop();
-  const { cart, catalog, discounts, payments, now: shopNow, address, openAddress, customer, setCustomer,
+  const { cart, catalog, discounts, payments, charges, now: shopNow, address, openAddress, customer, setCustomer,
     fulfillmentMode, toast, applyInventory, setCartNotice, clearCart, refreshInventory, checkoutOrderId, resetCheckoutOrderId } = shop;
   const router = useRouter();
 
@@ -54,7 +54,7 @@ function CheckoutForm() {
 
   const zone = resolveDeliveryZone(address, fulfillmentMode);
   const selectedDiscount = discountForCode(appliedCode, discounts);
-  const t = totals(cart, catalog.items, fulfillmentMode, zone, selectedDiscount);
+  const t = totals(cart, catalog.items, fulfillmentMode, zone, selectedDiscount, charges);
   const showActualsNote = fulfillmentMode === "delivery" && zone === "actuals";
   const plan = useMemo(() => deliveryPlan(cart, catalog.items, now), [cart, catalog.items, now]);
   const days = useMemo(() => buildSlots(plan), [plan]);
@@ -126,7 +126,7 @@ function CheckoutForm() {
       }),
       notes: v("notes"),
       discountCode: selectedDiscount && t.discount ? selectedDiscount.code : undefined,
-      totals: { sub: t.sub, discount: t.discount, delivery: t.delivery, tax: t.tax, total: t.total }
+      totals: { sub: t.sub, discount: t.discount, delivery: t.delivery, tax: t.tax, packaging: t.packaging, total: t.total }
     };
 
     if (payment === "RAZORPAY") {

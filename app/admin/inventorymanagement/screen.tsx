@@ -1,7 +1,8 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { DEFAULT_PAYMENTS, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "@/lib/order-store/types";
+import { packagingCharge, readChargeSettings } from "@/lib/order-store/pricing";
+import { DEFAULT_CHARGES, DEFAULT_PAYMENTS, type ChargeSettings, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "@/lib/order-store/types";
 import { asset, money } from "@/lib/order-store/format";
 
 type ItemForm = InventoryRow & { stock: number | null; published: boolean; options_json: string; image: string };
@@ -53,6 +54,8 @@ export default function InventoryManagement({ signedIn, configured }: { signedIn
   const [discounts, setDiscounts] = useState<DiscountRule[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<PaymentSettings>(DEFAULT_PAYMENTS);
+  const [charges, setCharges] = useState<ChargeSettings>(DEFAULT_CHARGES);
+  const [chargeDraft, setChargeDraft] = useState<ChargeSettings>(DEFAULT_CHARGES);
   const [razorpayConfigured, setRazorpayConfigured] = useState(false);
   const [item, setItem] = useState<ItemForm | null>(null);
   const [discount, setDiscount] = useState<DiscountForm | null>(null);
@@ -72,6 +75,7 @@ export default function InventoryManagement({ signedIn, configured }: { signedIn
       if (!r.ok) throw new Error(data.error || "Could not load your inventory.");
       setItems(data.items || []); setDiscounts(data.discounts || []); setOrders(Array.isArray(data.orders) ? data.orders : []);
       if (data.payments && typeof data.payments === "object") setPayments({ razorpay: data.payments.razorpay === true, cod: data.payments.cod !== false });
+      if (data.charges) { const next = readChargeSettings(data.charges); setCharges(next); if (!quiet) setChargeDraft(next); }
       if (typeof data.razorpayConfigured === "boolean") setRazorpayConfigured(data.razorpayConfigured);
     } catch (e) { if (!quiet) setError(e instanceof Error ? e.message : "Could not load inventory."); }
     finally { if (!quiet) setBusy(false); }
@@ -84,6 +88,54 @@ export default function InventoryManagement({ signedIn, configured }: { signedIn
     return () => window.clearInterval(timer);
   }, [authenticated, load]);
 
+  useEffect(() => {
+    const onShow = (event: PageTransitionEvent) => { if (event.persisted) void load(true); };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, [load]);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    let keepSession = false;
+    const endSession = () => {
+      if (keepSession) return;
+      void fetch("/api/admin/logout", { method: "POST", keepalive: true });
+    };
+    const leavesAdmin = (url: string) => {
+      const next = new URL(url, window.location.href);
+      if (next.protocol !== "http:" && next.protocol !== "https:") return false;
+      return next.origin !== window.location.origin || !(next.pathname === "/admin" || next.pathname.startsWith("/admin/"));
+    };
+    type NavEvent = Event & { navigationType?: string; destination?: { url?: string } };
+    const navigation = "navigation" in window ? window.navigation : null;
+    const onNavigate = (event: Event) => {
+      const nav = event as NavEvent;
+      if (nav.navigationType === "reload") { keepSession = true; return; }
+      if (nav.destination?.url && leavesAdmin(nav.destination.url)) endSession();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "F5" || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "r")) keepSession = true;
+    };
+    const onClick = (event: MouseEvent) => {
+      const anchor = (event.target as Element | null)?.closest?.("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#")) return;
+      if (leavesAdmin(anchor.href)) endSession();
+    };
+    const onPageHide = () => { if (!navigation) endSession(); };
+    navigation?.addEventListener("navigate", onNavigate);
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      navigation?.removeEventListener("navigate", onNavigate);
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("click", onClick, true);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [authenticated]);
+
   async function login(e: FormEvent) {
     e.preventDefault(); setBusy(true); setLoginError("");
     try {
@@ -95,8 +147,14 @@ export default function InventoryManagement({ signedIn, configured }: { signedIn
     finally { setBusy(false); }
   }
 
+  function applyCharges(value: unknown) {
+    const next = readChargeSettings(value);
+    setCharges(next);
+    setChargeDraft(next);
+  }
+
   async function logout() {
-    await fetch("/api/admin/logout", { method: "POST" });
+    await fetch("/api/admin/logout", { method: "POST", keepalive: true });
     setAuthenticated(false); setItems([]); setDiscounts([]); setOrders([]); setItem(null); setDiscount(null);
   }
 
@@ -110,7 +168,8 @@ export default function InventoryManagement({ signedIn, configured }: { signedIn
       if (Array.isArray(data.items)) setItems(data.items);
       if (Array.isArray(data.discounts)) setDiscounts(data.discounts);
       if (data.payments && typeof data.payments === "object") setPayments({ razorpay: data.payments.razorpay === true, cod: data.payments.cod !== false });
-      setItem(null); setDiscount(null); setMessage(operation === "save-payments" ? "Payment methods updated." : "Saved to the local CSV store.");
+      if (data.charges) applyCharges(data.charges);
+      setItem(null); setDiscount(null); setMessage(operation === "save-payments" ? "Payment methods updated." : operation === "save-charges" ? "Packaging and handling charges updated." : "Saved to the local CSV store.");
       return true;
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save changes."); return false; }
     finally { setBusy(false); }
@@ -171,15 +230,15 @@ export default function InventoryManagement({ signedIn, configured }: { signedIn
     <p className="login-foot">This portal is private and does not appear in the customer navigation.</p></div></div>;
 
   return <div className="admin-shell">
-    <aside className="admin-sidebar"><a className="admin-brand" href="/">MK<span>MARWADI KHANA</span></a><p className="admin-side-label">MANAGE</p><button className={tab === "items" ? "active" : ""} onClick={() => { setTab("items"); setItem(null); setDiscount(null); }}>▦ <span>Menu & inventory</span></button><button className={tab === "orders" ? "active" : ""} onClick={() => { setTab("orders"); setItem(null); setDiscount(null); }}>🧾 <span>Orders received</span></button><button className={tab === "discounts" ? "active" : ""} onClick={() => { setTab("discounts"); setItem(null); setDiscount(null); }}>％ <span>Discount engine</span></button><button className={tab === "payments" ? "active" : ""} onClick={() => { setTab("payments"); setItem(null); setDiscount(null); }}>₹ <span>Payments</span></button><div className="admin-side-bottom"><span className="admin-online-dot" /> Local CSV store<button onClick={logout}>Sign out</button></div></aside>
+    <aside className="admin-sidebar"><a className="admin-brand" href="/">MK<span>MARWADI KHANA</span></a><p className="admin-side-label">MANAGE</p><button className={tab === "items" ? "active" : ""} onClick={() => { setTab("items"); setItem(null); setDiscount(null); }}>▦ <span>Menu & inventory</span></button><button className={tab === "orders" ? "active" : ""} onClick={() => { setTab("orders"); setItem(null); setDiscount(null); }}>🧾 <span>Orders received</span></button><button className={tab === "discounts" ? "active" : ""} onClick={() => { setTab("discounts"); setItem(null); setDiscount(null); }}>％ <span>Discount engine</span></button><button className={tab === "payments" ? "active" : ""} onClick={() => { setTab("payments"); setItem(null); setDiscount(null); }}>₹ <span>Payments</span></button><button type="button" className="admin-signout-mobile" onClick={() => void logout()}>Sign out</button><div className="admin-side-bottom"><span className="admin-online-dot" /> Local CSV store<button type="button" onClick={() => void logout()}>Sign out</button></div></aside>
     <main className="admin-main"><header className="admin-top"><div><p className="admin-kicker">STORE CONTROL</p><h1>{titles[tab]}</h1></div><div className="admin-top-actions"><button className="admin-button quiet" onClick={() => load()} disabled={busy}>↻ Refresh</button>{tab === "items" ? <button className="admin-button primary" onClick={() => setItem(blankItem())}>＋ Add menu item</button> : null}{tab === "discounts" ? <button className="admin-button primary" onClick={() => setDiscount(blankDiscount())}>＋ Create discount</button> : null}</div></header>
       <div className="admin-summary"><div><span>Menu items</span><b>{items.length}</b><small>{items.filter((x) => x.published !== false).length} published to store</small></div><div><span>Low stock</span><b>{items.filter((x) => x.stock != null && Number(x.stock) <= 10).length}</b><small>10 units or fewer</small></div><div><span>Orders received</span><b>{orders.length}</b><small>Newest orders appear below</small></div><div><span>Active offers</span><b>{discounts.filter((x) => x.active).length}</b><small>Codes available at checkout</small></div></div>
       {error ? <div className="admin-alert" role="alert">{error}</div> : null}{message ? <div className="admin-success" role="status">{message}</div> : null}
       {tab === "payments" ? <section className="admin-panel"><div className="admin-panel-head"><div><h2>Payment methods</h2><p>Turn Razorpay and cash on delivery on or off. Customers only see the methods that are on.</p></div></div><div className="payment-list">
         <article className="pay-switch"><div><h3>Cash on delivery</h3><p>Customers pay in cash when the order is delivered, or when they pick it up.</p><span className={`admin-pill ${payments.cod ? "on" : "draft"}`}>{payments.cod ? "On at checkout" : "Off"}</span></div><label className="switch"><input type="checkbox" checked={payments.cod} disabled={busy} onChange={(e) => setPaymentFlag("cod", e.target.checked)} /><span /></label></article>
         <article className="pay-switch"><div><h3>Razorpay</h3><p>Customers pay online by card, UPI or netbanking before the order is confirmed.</p><span className={`admin-pill ${razorpayLive ? "on" : "draft"}`}>{razorpayLive ? "On at checkout" : payments.razorpay ? "On, waiting for keys" : "Off"}</span>{payments.razorpay && !razorpayConfigured ? <p className="pay-key-note">Add <code>RAZORPAY_KEY_ID</code> and <code>RAZORPAY_KEY_SECRET</code> to the server environment, then restart the site. Until then, customers will not see Razorpay.</p> : <p className="pay-key-note">{razorpayConfigured ? "The Razorpay keys are on the server. Turning this on shows Pay online at checkout." : "Keys are not on the server yet. Cash on delivery stays available without them."}</p>}</div><label className="switch"><input type="checkbox" checked={payments.razorpay} disabled={busy} onChange={(e) => setPaymentFlag("razorpay", e.target.checked)} /><span /></label></article>
-      </div></section> : tab === "orders" ? <section className="admin-panel"><div className="admin-panel-head"><div><h2>Orders received</h2><p>Every placed order shows here with its type, phone, address and item details.</p></div><input className="admin-search" placeholder="Search orders, phone or items" value={orderQuery} onChange={(e) => setOrderQuery(e.target.value)} /></div>
-        {visibleOrders.length ? <div className="order-list">{visibleOrders.map((order) => <article className="order-card" key={order.id}><div className="order-card-top"><div><p className="admin-kicker">Order received</p><h3>{order.id}</h3><small>{formatReceived(order.placedAt)}</small></div><span className="admin-pill on">Order received</span></div><dl className="order-meta"><div><dt>Type</dt><dd>{orderTypeLabel(order.fulfillment)}</dd></div><div><dt>Phone</dt><dd>{order.customer?.phone ? <a href={`tel:${order.customer.phone}`}>{order.customer.phone}</a> : "Not provided"}</dd></div><div><dt>Customer</dt><dd>{order.customer?.name || "Not provided"}{order.customer?.email ? <small>{order.customer.email}</small> : null}</dd></div><div><dt>Slot</dt><dd>{order.slot || "Not chosen"}</dd></div><div className="wide"><dt>{order.fulfillment === "pickup" ? "Pickup address" : "Delivery address"}</dt><dd>{orderAddress(order)}</dd></div></dl><h4>Item details</h4><ul className="order-items">{(order.items || []).map((line, index) => <li key={`${order.id}-${line.id}-${index}`}><span>{line.qty} × {line.name}{line.options ? <small>{line.options}</small> : null}</span><b>{money(line.price)}</b></li>)}</ul><p className="order-total"><span>{paymentLabel(order)}{order.discountCode ? ` · ${order.discountCode}` : ""}{order.notes ? ` · Note: ${order.notes}` : ""}</span><b>{money(order.totals?.total || 0)}</b></p></article>)}</div> : <div className="admin-empty">{orders.length ? "No orders match that search." : "No orders received yet. A new order will appear here as soon as it is placed."}</div>}
+      </div><form className="admin-form charge-form" onSubmit={(e) => { e.preventDefault(); void mutate("save-charges", { charges: { packagingPercent: Number(chargeDraft.packagingPercent), packagingMax: Number(chargeDraft.packagingMax) } }); }}><h2>Packaging & handling</h2><p>This is a percent of the item total, and it never goes above the maximum. At {charges.packagingPercent}% with a ₹{charges.packagingMax} cap, items of ₹1,000 are charged ₹{packagingCharge(1000, charges)}.</p><label>Percent of item total<input type="number" min="0" max="100" step="0.1" value={chargeDraft.packagingPercent} onChange={(e) => setChargeDraft({ ...chargeDraft, packagingPercent: e.target.value === "" ? 0 : Number(e.target.value) })} /></label><label>Maximum charge (₹)<input type="number" min="0" max="10000" step="1" value={chargeDraft.packagingMax} onChange={(e) => setChargeDraft({ ...chargeDraft, packagingMax: e.target.value === "" ? 0 : Number(e.target.value) })} /></label><p className="charge-preview">With these values, ₹1,000 of items would add ₹{packagingCharge(1000, chargeDraft)}.</p><button className="admin-button primary" disabled={busy}>{busy ? "Saving…" : "Save charges"}</button></form></section> : tab === "orders" ? <section className="admin-panel"><div className="admin-panel-head"><div><h2>Orders received</h2><p>Every placed order shows here with its type, phone, address and item details.</p></div><input className="admin-search" placeholder="Search orders, phone or items" value={orderQuery} onChange={(e) => setOrderQuery(e.target.value)} /></div>
+        {visibleOrders.length ? <div className="order-list">{visibleOrders.map((order) => <article className="order-card" key={order.id}><div className="order-card-top"><div><p className="admin-kicker">Order received</p><h3>{order.id}</h3><small>{formatReceived(order.placedAt)}</small></div><span className="admin-pill on">Order received</span></div><dl className="order-meta"><div><dt>Type</dt><dd>{orderTypeLabel(order.fulfillment)}</dd></div><div><dt>Phone</dt><dd>{order.customer?.phone ? <a href={`tel:${order.customer.phone}`}>{order.customer.phone}</a> : "Not provided"}</dd></div><div><dt>Customer</dt><dd>{order.customer?.name || "Not provided"}{order.customer?.email ? <small>{order.customer.email}</small> : null}</dd></div><div><dt>Slot</dt><dd>{order.slot || "Not chosen"}</dd></div><div><dt>Packaging & handling</dt><dd>{money(order.totals?.packaging || 0)}</dd></div><div className="wide"><dt>{order.fulfillment === "pickup" ? "Pickup address" : "Delivery address"}</dt><dd>{orderAddress(order)}</dd></div></dl><h4>Item details</h4><ul className="order-items">{(order.items || []).map((line, index) => <li key={`${order.id}-${line.id}-${index}`}><span>{line.qty} × {line.name}{line.options ? <small>{line.options}</small> : null}</span><b>{money(line.price)}</b></li>)}</ul><p className="order-total"><span>{paymentLabel(order)}{order.discountCode ? ` · ${order.discountCode}` : ""}{order.notes ? ` · Note: ${order.notes}` : ""}</span><b>{money(order.totals?.total || 0)}</b></p></article>)}</div> : <div className="admin-empty">{orders.length ? "No orders match that search." : "No orders received yet. A new order will appear here as soon as it is placed."}</div>}
       </section> : tab === "items" ? <section className="admin-panel"><div className="admin-panel-head"><div><h2>Store menu</h2><p>Publish, draft, update stock and manage your menu photos.</p><button className="admin-text-button import-menu-button" onClick={importOriginalMenu} disabled={busy}>Restore missing items from starter menu</button></div><input className="admin-search" placeholder="Search items or categories" value={query} onChange={(e) => setQuery(e.target.value)} /></div>
         {busy && !items.length ? <div className="admin-empty">Loading your CSV inventory…</div> : filtered.length ? <div className="inventory-table-wrap"><table className="inventory-table"><thead><tr><th>ITEM</th><th>CATEGORY</th><th>PRICE</th><th>STOCK</th><th>STATUS</th><th /></tr></thead><tbody>{filtered.map((x) => <tr key={x.id}><td><div className="admin-item-cell"><InventoryPhoto src={splitImages(x.image || "")[0] || ""} emoji={x.emoji || "🍽️"} /><div><strong>{x.name}</strong><small>{x.id}</small></div></div></td><td>{x.category}</td><td>₹{Number(x.price || 0).toLocaleString("en-IN")}</td><td>{x.stock == null ? "Unlimited" : x.stock}</td><td><span className={`admin-pill ${x.published === false ? "draft" : x.available === false || x.stock === 0 ? "off" : "on"}`}>{x.published === false ? "Draft" : x.available === false || x.stock === 0 ? "Unavailable" : "Live"}</span></td><td><button className="admin-text-button" onClick={() => setItem({ ...blankItem(), ...x, stock: x.stock ?? null, options_json: x.options_json || "" })}>Edit</button></td></tr>)}</tbody></table></div> : <div className="admin-empty">No menu items yet. Add your first item to start building a custom menu.</div>}
       </section> : <section className="admin-panel"><div className="admin-panel-head"><div><h2>Discount codes</h2><p>Create percentage or fixed-value promotions with date, minimum spend and product limits.</p></div></div>{discounts.length ? <div className="discount-grid">{discounts.map((d) => <article className="discount-card" key={d.code}><div className="discount-card-top"><span className="discount-symbol">％</span><span className={`admin-pill ${d.active ? "on" : "draft"}`}>{d.active ? "Active" : "Paused"}</span></div><h3>{d.code}</h3><p>{d.type === "percent" ? `${d.value}% off` : `₹${d.value} off`}{d.minimum_subtotal ? ` · min. ₹${d.minimum_subtotal}` : ""}</p><small>{d.uses || 0}{d.max_uses ? ` / ${d.max_uses}` : ""} redemptions</small><div className="discount-card-actions"><button className="admin-text-button" onClick={() => setDiscount({ ...blankDiscount(), ...d })}>Edit</button><button className="admin-text-button danger" onClick={() => { if (window.confirm(`Delete discount ${d.code}?`)) mutate("delete-discount", { code: d.code }); }}>Delete</button></div></article>)}</div> : <div className="admin-empty">No discount codes created yet.</div>}</section>}

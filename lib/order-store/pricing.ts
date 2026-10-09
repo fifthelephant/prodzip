@@ -1,6 +1,6 @@
 import { STORE } from "@/data/order-store/config";
 import { money } from "./format";
-import type { CartLine, DeliveryZone, DiscountRule, FulfillmentMode, MenuItem, Totals } from "./types";
+import { DEFAULT_CHARGES, type CartLine, type ChargeSettings, type DeliveryZone, type DiscountRule, type FulfillmentMode, type MenuItem, type Totals } from "./types";
 
 /**
  * A choice can scale the base price (factor: 0.5 = half a kg) and/or add a
@@ -47,18 +47,38 @@ export function selLabel(item: MenuItem, sel: number[][]): string {
 
 export const lineKey = (id: string, sel: number[][]) => id + "|" + JSON.stringify(sel);
 
+/** 2.5% of a ₹1,000 item total is ₹25. The charge never goes above the configured maximum. */
+export function packagingCharge(itemTotal: number, settings: ChargeSettings = DEFAULT_CHARGES): number {
+  if (itemTotal <= 0) return 0;
+  const percent = Number.isFinite(settings.packagingPercent) ? Math.max(0, settings.packagingPercent) : DEFAULT_CHARGES.packagingPercent;
+  const cap = Number.isFinite(settings.packagingMax) ? Math.max(0, settings.packagingMax) : DEFAULT_CHARGES.packagingMax;
+  return Math.min(cap, Math.round((itemTotal * percent) / 100));
+}
+
+export function readChargeSettings(value: unknown): ChargeSettings {
+  const row = value && typeof value === "object" ? value as Partial<ChargeSettings> : {};
+  const percent = Number(row.packagingPercent);
+  const max = Number(row.packagingMax);
+  return {
+    packagingPercent: Number.isFinite(percent) && percent >= 0 ? percent : DEFAULT_CHARGES.packagingPercent,
+    packagingMax: Number.isFinite(max) && max >= 0 ? max : DEFAULT_CHARGES.packagingMax,
+  };
+}
+
 export function totals(
   cart: CartLine[],
   items: Record<string, MenuItem>,
   fulfillment: FulfillmentMode = "delivery",
   zone: DeliveryZone = "unknown",
   discount?: DiscountRule,
+  charges: ChargeSettings = DEFAULT_CHARGES,
 ): Totals {
   const sub = cart.reduce((a, l) => (items[l.id] ? a + unitPrice(items[l.id], l.sel) * l.qty : a), 0);
   const discountAmount = discountValue(discount, cart, items, sub);
   const delivery = fulfillment === "delivery" && sub > 0 && zone === "gurugram" ? STORE.deliveryFee : 0;
   const tax = Math.round((sub - discountAmount) * STORE.taxRate);
-  return { sub, discount: discountAmount, delivery, tax, total: sub - discountAmount + delivery + tax, belowMin: fulfillment === "delivery" && sub < STORE.minOrder };
+  const packaging = packagingCharge(sub, charges);
+  return { sub, discount: discountAmount, delivery, tax, packaging, total: sub - discountAmount + delivery + tax + packaging, belowMin: fulfillment === "delivery" && sub < STORE.minOrder };
 }
 
 export function discountValue(rule: DiscountRule | undefined, cart: CartLine[], items: Record<string, MenuItem>, subtotal: number): number {

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { hasAdminSession, sameOrigin } from "@/lib/admin/auth";
 import { readCsvStore, saveImageData, withCsvStore } from "@/lib/order-store/csv-store";
 import { razorpayKeysConfigured } from "@/lib/order-store/payments";
-import type { DiscountRule, InventoryRow, PaymentSettings } from "@/lib/order-store/types";
+import type { ChargeSettings, DiscountRule, InventoryRow, PaymentSettings } from "@/lib/order-store/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   if (size > 5_000_000) return NextResponse.json({ error: "The upload is too large. Choose an image under 3 MB." }, { status: 413 });
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   if (!body || typeof body.operation !== "string") return NextResponse.json({ error: "Invalid request." }, { status: 400 });
-  if (!["save-item", "delete-item", "save-discount", "delete-discount", "upload-image", "save-payments"].includes(body.operation)) return NextResponse.json({ error: "Unsupported inventory action." }, { status: 400 });
+  if (!["save-item", "delete-item", "save-discount", "delete-discount", "upload-image", "save-payments", "save-charges"].includes(body.operation)) return NextResponse.json({ error: "Unsupported inventory action." }, { status: 400 });
   try {
     if (body.operation === "upload-image") {
       if (typeof body.name !== "string" || typeof body.data !== "string") throw new Error("Choose an image file.");
@@ -58,9 +58,20 @@ export async function POST(request: Request) {
         if (!next.cod && !(next.razorpay && razorpayKeysConfigured())) throw new Error("Keep cash on delivery on until Razorpay keys are on the server and Razorpay is switched on.");
         if (!next.razorpay && !next.cod) throw new Error("Keep at least one payment method available.");
         store.payments = next;
+      } else if (body.operation === "save-charges") {
+        store.charges = adminCharges(body.charges);
       }
-      return { ok: true, items: store.items, discounts: store.discounts, payments: store.payments };
+      return { ok: true, items: store.items, discounts: store.discounts, payments: store.payments, charges: store.charges };
     });
     return NextResponse.json({ ...result, razorpayConfigured: razorpayKeysConfigured() }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not save changes." }, { status: 503 }); }
+}
+
+function adminCharges(value: unknown): ChargeSettings {
+  const row = value && typeof value === "object" ? value as Partial<ChargeSettings> : {};
+  const percent = Number(row.packagingPercent);
+  const max = Number(row.packagingMax);
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100) throw new Error("Packaging percent must be between 0 and 100.");
+  if (!Number.isFinite(max) || max < 0 || max > 10000) throw new Error("The packaging maximum must be between ₹0 and ₹10,000.");
+  return { packagingPercent: Math.round(percent * 100) / 100, packagingMax: Math.round(max) };
 }

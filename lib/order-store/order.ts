@@ -1,6 +1,6 @@
 import { STORE } from "@/data/order-store/config";
 import { money } from "./format";
-import { DEFAULT_PAYMENTS, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "./types";
+import { DEFAULT_CHARGES, DEFAULT_PAYMENTS, type ChargeSettings, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "./types";
 
 /** The WhatsApp message sent to the shop for an order. */
 export function whatsappText(o: Order): string {
@@ -13,6 +13,7 @@ export function whatsappText(o: Order): string {
     `Sub total: ${money(o.totals.sub)}`,
     o.totals.discount ? `Discount${o.discountCode ? ` (${o.discountCode})` : ""}: −${money(o.totals.discount)}` : "",
     `Delivery: ${o.fulfillment === "pickup" ? "Not applicable" : o.totals.delivery ? money(o.totals.delivery) : "On actuals"}`,
+    o.totals.packaging ? `Packaging & handling: ${money(o.totals.packaging)}` : "",
     `GST: ${money(o.totals.tax)}`,
     `*To pay: ${money(o.totals.total)}* (${o.payment === "RAZORPAY" ? "Razorpay · paid online" : o.payment === "COD" ? `Cash on ${o.fulfillment === "pickup" ? "pickup" : "delivery"}` : o.payment})`,
     "",
@@ -53,16 +54,23 @@ export async function sendOrder(order: Order, paymentProof?: string): Promise<Ba
   return r.json();
 }
 
-export async function fetchInventory(): Promise<{ items: InventoryRow[]; discounts: DiscountRule[]; payments: PaymentSettings }> {
+export async function fetchInventory(): Promise<{ items: InventoryRow[]; discounts: DiscountRule[]; payments: PaymentSettings; charges: ChargeSettings }> {
   const r = await fetch("/api/orders", { cache: "no-store" });
   const j = await r.json();
   if (!j.ok || !Array.isArray(j.items)) throw new Error("bad inventory");
   const payments = j.payments && typeof j.payments === "object" ? j.payments as Partial<PaymentSettings> : {};
+  const charges = j.charges && typeof j.charges === "object" ? j.charges as Partial<ChargeSettings> : {};
+  const percent = Number(charges.packagingPercent);
+  const max = Number(charges.packagingMax);
   return {
     items: j.items,
     discounts: Array.isArray(j.discounts) ? j.discounts : [],
     payments: { razorpay: payments.razorpay === true, cod: payments.cod !== false },
+    charges: {
+      packagingPercent: Number.isFinite(percent) && percent >= 0 ? percent : DEFAULT_CHARGES.packagingPercent,
+      packagingMax: Number.isFinite(max) && max >= 0 ? max : DEFAULT_CHARGES.packagingMax,
+    },
   };
 }
 
-export { DEFAULT_PAYMENTS };
+export { DEFAULT_CHARGES, DEFAULT_PAYMENTS };

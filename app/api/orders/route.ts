@@ -28,7 +28,7 @@ function validPaymentProof(proof: string | undefined, orderId: string, amount: n
 export async function GET() {
   try {
     const store = await readCsvStore();
-    return NextResponse.json({ ok: true, items: store.items, discounts: store.discounts, payments: customerPayments(store.payments) }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: true, items: store.items, discounts: store.discounts, payments: customerPayments(store.payments), charges: store.charges }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Menu data is unavailable." }, { status: 503 });
   }
@@ -72,12 +72,12 @@ export async function POST(request: Request) {
       const addressText = [body.address?.line, body.address?.landmark, body.address?.map].filter(Boolean).join(", ");
       const zone = fulfillment === "delivery" ? detectDeliveryZone(null, addressText) : "unknown";
       const discount = discountForCode(body.discountCode || "", store.discounts);
-      const pricing = totals(lines, items, fulfillment, zone, discount);
+      const pricing = totals(lines, items, fulfillment, zone, discount, store.charges);
       if (discount && pricing.discount <= 0) return { ok: false, error: "That discount code is invalid or no longer applies to this order.", items: store.items };
       if (body.discountCode && !discount) return { ok: false, error: "That discount code is invalid or no longer applies to this order.", items: store.items };
       if (pricing.belowMin) return { ok: false, error: `The minimum order is ₹${STORE.minOrder}.`, items: store.items };
       const supplied = body.totals;
-      if (!supplied || supplied.sub !== pricing.sub || supplied.discount !== pricing.discount || supplied.tax !== pricing.tax || supplied.total !== pricing.total) {
+      if (!supplied || supplied.sub !== pricing.sub || supplied.discount !== pricing.discount || supplied.tax !== pricing.tax || supplied.packaging !== pricing.packaging || supplied.total !== pricing.total) {
         return { ok: false, error: "Your order total changed. Please review checkout and try again.", items: store.items };
       }
       if (body.payment === "COD" && !store.payments.cod) {

@@ -126,6 +126,7 @@ export interface Totals {
   discount: number;
   delivery: number;
   tax: number;
+  packaging: number;
   total: number;
   belowMin: boolean;
 }
@@ -140,6 +141,14 @@ export interface PaymentSettings {
 
 export const DEFAULT_PAYMENTS: PaymentSettings = { razorpay: false, cod: true };
 
+/** Packaging and handling, taken as a percent of the item total and capped. */
+export interface ChargeSettings {
+  packagingPercent: number;
+  packagingMax: number;
+}
+
+export const DEFAULT_CHARGES: ChargeSettings = { packagingPercent: 2.5, packagingMax: 100 };
+
 export interface Order {
   id: string;
   placedAt: string;
@@ -151,7 +160,7 @@ export interface Order {
   items: { id: string; name: string; options: string; qty: number; price: number }[];
   notes: string;
   discountCode?: string;
-  totals: { sub: number; discount: number; delivery: number; tax: number; total: number };
+  totals: { sub: number; discount: number; delivery: number; tax: number; packaging: number; total: number };
 }
 
 export interface StoreConfig {

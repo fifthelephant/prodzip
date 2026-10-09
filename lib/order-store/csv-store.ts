@@ -2,13 +2,14 @@ import { mkdir, readFile, rename, stat, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { MENU } from "@/data/order-store/menu";
-import { DEFAULT_PAYMENTS, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "@/lib/order-store/types";
+import { DEFAULT_CHARGES, DEFAULT_PAYMENTS, type ChargeSettings, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "@/lib/order-store/types";
 
 export interface CsvStore {
   items: InventoryRow[];
   discounts: DiscountRule[];
   orders: Order[];
   payments: PaymentSettings;
+  charges: ChargeSettings;
 }
 
 const seedDirectory = path.join(process.cwd(), "data");
@@ -27,7 +28,7 @@ const DISCOUNT_COLUMNS: (keyof DiscountRule)[] = [
   "code", "type", "value", "minimum_subtotal", "active", "starts_at", "ends_at", "item_ids", "category_ids", "max_uses", "uses",
 ];
 const ORDER_COLUMNS: (keyof Order)[] = ["id", "placedAt", "slot", "payment", "fulfillment", "customer", "address", "items", "notes", "discountCode", "totals"];
-const PAYMENT_COLUMNS: (keyof PaymentSettings)[] = ["razorpay", "cod"];
+const SETTINGS_COLUMNS = ["razorpay", "cod", "packaging_percent", "packaging_max"] as const;
 
 function csvCell(value: unknown): string {
   const text = value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -84,17 +85,29 @@ function parseJson<T>(value: string, fallback: T): T {
   try { return JSON.parse(value) as T; } catch { return fallback; }
 }
 
-function paymentsFromCsv(text: string): PaymentSettings {
+function settingsFromCsv(text: string): { payments: PaymentSettings; charges: ChargeSettings } {
   const [row] = parseCsv(text);
-  if (!row) return { ...DEFAULT_PAYMENTS };
-  return { razorpay: parseBoolean(row.razorpay), cod: row.cod === "" ? true : parseBoolean(row.cod) };
+  if (!row) return { payments: { ...DEFAULT_PAYMENTS }, charges: { ...DEFAULT_CHARGES } };
+  const percent = Number(row.packaging_percent);
+  const max = Number(row.packaging_max);
+  return {
+    payments: { razorpay: parseBoolean(row.razorpay), cod: row.cod === "" ? true : parseBoolean(row.cod) },
+    charges: {
+      packagingPercent: row.packaging_percent == null || row.packaging_percent === "" || !Number.isFinite(percent) ? DEFAULT_CHARGES.packagingPercent : percent,
+      packagingMax: row.packaging_max == null || row.packaging_max === "" || !Number.isFinite(max) ? DEFAULT_CHARGES.packagingMax : max,
+    },
+  };
+}
+
+function settingsRow(payments: PaymentSettings, charges: ChargeSettings) {
+  return { razorpay: payments.razorpay, cod: payments.cod, packaging_percent: charges.packagingPercent, packaging_max: charges.packagingMax };
 }
 
 function ordersFromCsv(text: string): Order[] {
   return parseCsv(text).map((r) => ({
     id: r.id, placedAt: r.placedAt, slot: r.slot, payment: r.payment as Order["payment"], fulfillment: r.fulfillment === "pickup" ? "pickup" : "delivery",
     customer: parseJson(r.customer, { name: "", email: "", phone: "" }), address: parseJson(r.address, { line: "", map: "", lat: null, lng: null }),
-    items: parseJson(r.items, []), notes: r.notes, discountCode: r.discountCode, totals: parseJson(r.totals, { sub: 0, discount: 0, delivery: 0, tax: 0, total: 0 }),
+    items: parseJson(r.items, []), notes: r.notes, discountCode: r.discountCode, totals: parseJson(r.totals, { sub: 0, discount: 0, delivery: 0, tax: 0, packaging: 0, total: 0 }),
   }));
 }
 
@@ -130,7 +143,7 @@ async function ensureFiles() {
     catch { await writeAtomic(ordersPath, toCsv([], ORDER_COLUMNS)); }
   }
   try { await stat(paymentsPath); } catch {
-    await writeAtomic(paymentsPath, toCsv([DEFAULT_PAYMENTS], PAYMENT_COLUMNS));
+    await writeAtomic(paymentsPath, toCsv([settingsRow(DEFAULT_PAYMENTS, DEFAULT_CHARGES)], [...SETTINGS_COLUMNS]));
   }
 }
 
@@ -139,7 +152,8 @@ async function readUnlocked(): Promise<CsvStore> {
   const [inventoryCsv, discountsCsv, ordersCsv, paymentsCsv] = await Promise.all([
     readFile(inventoryPath, "utf8"), readFile(discountsPath, "utf8"), readFile(ordersPath, "utf8"), readFile(paymentsPath, "utf8"),
   ]);
-  return { items: inventoryFromCsv(inventoryCsv), discounts: discountsFromCsv(discountsCsv), orders: ordersFromCsv(ordersCsv), payments: paymentsFromCsv(paymentsCsv) };
+  const settings = settingsFromCsv(paymentsCsv);
+  return { items: inventoryFromCsv(inventoryCsv), discounts: discountsFromCsv(discountsCsv), orders: ordersFromCsv(ordersCsv), payments: settings.payments, charges: settings.charges };
 }
 
 async function acquireLock() {
@@ -165,7 +179,7 @@ export async function withCsvStore<T>(work: (store: CsvStore) => Promise<T> | T)
       writeAtomic(inventoryPath, toCsv(store.items, INVENTORY_COLUMNS)),
       writeAtomic(discountsPath, toCsv(store.discounts, DISCOUNT_COLUMNS)),
       writeAtomic(ordersPath, toCsv(store.orders, ORDER_COLUMNS)),
-      writeAtomic(paymentsPath, toCsv([store.payments], PAYMENT_COLUMNS)),
+      writeAtomic(paymentsPath, toCsv([settingsRow(store.payments, store.charges)], [...SETTINGS_COLUMNS])),
     ]);
     return result;
   } finally { await rm(lockPath, { recursive: true, force: true }); }
@@ -212,6 +226,6 @@ export async function writeStoreRows(store: CsvStore) {
     writeAtomic(inventoryPath, toCsv(store.items, INVENTORY_COLUMNS)),
     writeAtomic(discountsPath, toCsv(store.discounts, DISCOUNT_COLUMNS)),
     writeAtomic(ordersPath, toCsv(store.orders, ORDER_COLUMNS)),
-    writeAtomic(paymentsPath, toCsv([store.payments], PAYMENT_COLUMNS)),
+    writeAtomic(paymentsPath, toCsv([settingsRow(store.payments, store.charges)], [...SETTINGS_COLUMNS])),
   ]);
 }

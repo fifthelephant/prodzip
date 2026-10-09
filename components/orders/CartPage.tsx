@@ -12,7 +12,7 @@ import { Bill, Loading, VegMark } from "./bits";
 import { useShop } from "./ShopProvider";
 
 export default function CartPage() {
-  const { ready, inventoryFailed, retryInventory, cart, catalog, now, cartNotice, roomFor, setQty, address, openAddress, fulfillmentMode } = useShop();
+  const { ready, inventoryFailed, retryInventory, cart, catalog, charges, now, cartNotice, roomFor, setQty, address, openAddress, fulfillmentMode } = useShop();
   const router = useRouter();
   useEffect(() => { document.title = `Your Order · ${STORE.name}`; }, []);
 
@@ -34,7 +34,7 @@ export default function CartPage() {
   }
 
   const zone = resolveDeliveryZone(address, fulfillmentMode);
-  const t = totals(cart, catalog.items, fulfillmentMode, zone);
+  const t = totals(cart, catalog.items, fulfillmentMode, zone, undefined, charges);
   const plan = deliveryPlan(cart, catalog.items, now);
 
   const proceed = () => {
