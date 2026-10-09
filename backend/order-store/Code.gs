@@ -12,10 +12,12 @@
 
 const INVENTORY_TAB = "Inventory";
 const ORDERS_TAB = "Orders";
-const INVENTORY_HEADERS = ["id", "name", "category", "description", "price", "stock", "available", "badge", "image", "shelf_life"];
+const INVENTORY_HEADERS = ["id", "name", "category", "description", "price", "stock", "available", "badge", "image", "shelf_life", "options_json", "emoji", "veg", "unit", "delivery_date", "order_from", "visible_until", "includes", "published"];
+const DISCOUNTS_TAB = "Discounts";
+const DISCOUNT_HEADERS = ["code", "type", "value", "minimum_subtotal", "active", "starts_at", "ends_at", "item_ids", "category_ids", "max_uses", "uses"];
 const ORDER_HEADERS = [
   "Placed at", "Order ID", "Status", "Delivery slot", "Name", "Phone", "Email",
-  "Address", "Landmark", "Map link", "Items", "Item total", "Delivery", "Tax", "To pay", "Payment", "Notes", "Fulfillment"
+  "Address", "Landmark", "Map link", "Items", "Item total", "Delivery", "Tax", "To pay", "Payment", "Notes", "Fulfillment", "Discount code", "Discount"
 ];
 const MAX_QTY_PER_ITEM = 50; // refuse obviously bogus orders
 
@@ -24,7 +26,8 @@ const MAX_QTY_PER_ITEM = 50; // refuse obviously bogus orders
 // ---------------------------------------------------------------------------
 
 function doGet() {
-  return json_({ ok: true, items: readInventory_().items, updatedAt: new Date().toISOString() });
+  const inv = readInventory_();
+  return json_({ ok: true, items: inv.items, discounts: readDiscounts_(), updatedAt: new Date().toISOString() });
 }
 
 function doPost(e) {
@@ -34,6 +37,7 @@ function doPost(e) {
   } catch (err) {
     return json_({ ok: false, error: "Bad request" });
   }
+  if (order && order.action === "admin") return adminRequest_(order);
   if (!order || !order.id || !Array.isArray(order.items) || !order.items.length) {
     return json_({ ok: false, error: "Bad request" });
   }
@@ -46,6 +50,7 @@ function doPost(e) {
 
     // Ignore a repeated submit of the same order (e.g. a double tap).
     if (orderExists_(order.id)) return json_({ ok: true, duplicate: true });
+    if (!discountAvailable_(order.discountCode)) return json_({ ok: false, error: "discount" });
 
     // Add up quantities per item (the same item can appear in several sizes).
     const need = {};
@@ -77,6 +82,7 @@ function doPost(e) {
     });
 
     appendOrder_(order);
+    consumeDiscount_(order.discountCode);
     emailCustomer_(order);
     return json_({ ok: true });
   } catch (err) {
@@ -93,6 +99,7 @@ function doPost(e) {
 function readInventory_() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(INVENTORY_TAB);
   if (!sheet) throw new Error('No "' + INVENTORY_TAB + '" tab. Run setup first.');
+  ensureHeaders_(sheet, INVENTORY_HEADERS);
   const values = sheet.getDataRange().getValues();
   const head = values.shift().map(function (h) { return String(h).trim().toLowerCase(); });
   const col = {};
@@ -116,7 +123,16 @@ function readInventory_() {
       available: isYes_(cell_(r, col.available)),
       badge: String(cell_(r, col.badge)).trim(),
       image: String(cell_(r, col.image)).trim(),
-      shelf_life: String(cell_(r, col.shelf_life)).trim()
+      shelf_life: String(cell_(r, col.shelf_life)).trim(),
+      options_json: String(cell_(r, col.options_json)).trim(),
+      emoji: String(cell_(r, col.emoji)).trim(),
+      veg: isYes_(cell_(r, col.veg)),
+      unit: String(cell_(r, col.unit)).trim(),
+      delivery_date: String(cell_(r, col.delivery_date)).trim(),
+      order_from: String(cell_(r, col.order_from)).trim(),
+      visible_until: String(cell_(r, col.visible_until)).trim(),
+      includes: String(cell_(r, col.includes)).trim(),
+      published: isYes_(cell_(r, col.published))
     };
     items.push(item);
     byId[id] = Object.assign({ row: i + 2 }, item);
@@ -126,6 +142,183 @@ function readInventory_() {
 
 function cell_(row, idx) {
   return idx < 0 ? "" : row[idx];
+}
+
+function ensureHeaders_(sheet, headers) {
+  const lastCol = Math.max(sheet.getLastColumn(), 1);
+  const existing = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function (h) { return String(h).trim(); });
+  if (!existing.some(String)) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return headers.slice();
+  }
+  headers.forEach(function (header) {
+    if (existing.indexOf(header) === -1) {
+      existing.push(header);
+      sheet.getRange(1, existing.length).setValue(header);
+    }
+  });
+  return existing;
+}
+
+function readDiscounts_() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(DISCOUNTS_TAB);
+  if (!sheet || sheet.getLastRow() < 2) return [];
+  const headers = ensureHeaders_(sheet, DISCOUNT_HEADERS).map(function (h) { return String(h).trim().toLowerCase(); });
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+  return rows.map(function (r) {
+    const get = function (key) { const i = headers.indexOf(key); return i < 0 ? "" : r[i]; };
+    const code = String(get("code")).trim().toUpperCase();
+    if (!code) return null;
+    return {
+      code: code,
+      type: String(get("type")).trim().toLowerCase(),
+      value: Number(get("value")) || 0,
+      minimum_subtotal: Number(get("minimum_subtotal")) || 0,
+      active: isYes_(get("active")),
+      starts_at: String(get("starts_at") || "").trim(),
+      ends_at: String(get("ends_at") || "").trim(),
+      item_ids: String(get("item_ids") || "").trim(),
+      category_ids: String(get("category_ids") || "").trim(),
+      max_uses: get("max_uses") === "" ? null : Number(get("max_uses")) || 0,
+      uses: Number(get("uses")) || 0
+    };
+  }).filter(Boolean);
+}
+
+function adminRequest_(body) {
+  const expected = PropertiesService.getScriptProperties().getProperty("SHEETS_ADMIN_TOKEN") || "";
+  if (!expected || !body.token || String(body.token) !== expected) return json_({ ok: false, error: "Admin integration is not authorized." });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const op = String(body.operation || "");
+    if (op === "list") return json_({ ok: true, items: readInventory_().items, discounts: readDiscounts_() });
+    if (op === "import-items") return importItems_(body.items);
+    if (op === "save-item") return saveItem_(body.item || {});
+    if (op === "delete-item") return deleteItem_(body.id);
+    if (op === "save-discount") return saveDiscount_(body.discount || {});
+    if (op === "delete-discount") return deleteDiscount_(body.code);
+    if (op === "upload-image") return uploadImage_(body);
+    return json_({ ok: false, error: "Unknown admin operation." });
+  } catch (err) {
+    return json_({ ok: false, error: String(err && err.message || "Admin request failed.") });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function importItems_(items) {
+  if (!Array.isArray(items) || items.length > 250) throw new Error("Invalid menu import.");
+  let added = 0;
+  items.forEach(function (item) {
+    const id = String(item && item.id || "").trim().toLowerCase();
+    if (id && !readInventory_().byId[id]) {
+      saveItem_(item);
+      added++;
+    }
+  });
+  return json_({ ok: true, imported: added, items: readInventory_().items, discounts: readDiscounts_() });
+}
+
+function saveItem_(item) {
+  const id = String(item.id || "").trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("Item ID must use lowercase letters, numbers, and hyphens.");
+  const name = String(item.name || "").trim();
+  const category = String(item.category || "").trim();
+  const price = Number(item.price);
+  const stockText = item.stock == null ? "" : String(item.stock).trim();
+  if (!name || !category || !isFinite(price) || price < 0) throw new Error("Name, category and a valid price are required.");
+  if (stockText && (!/^\d+$/.test(stockText) || Number(stockText) < 0)) throw new Error("Stock must be a whole number or blank for unlimited.");
+  let options = String(item.options_json || "").trim();
+  if (options) { JSON.parse(options); }
+  const sheet = SpreadsheetApp.getActive().getSheetByName(INVENTORY_TAB);
+  if (!sheet) throw new Error("Inventory tab is missing. Run setup first.");
+  const headers = ensureHeaders_(sheet, INVENTORY_HEADERS);
+  const lookup = headers.map(function (h) { return String(h).trim().toLowerCase(); });
+  const existing = readInventory_().byId[id];
+  const values = {
+    id: id, name: name, category: category, description: String(item.description || ""), price: price,
+    stock: stockText, available: item.available === false ? false : true, badge: String(item.badge || ""),
+    image: String(item.image || ""), shelf_life: String(item.shelf_life || ""), options_json: options,
+    emoji: String(item.emoji || "🍬"), veg: item.veg === false ? false : true, unit: String(item.unit || ""),
+    delivery_date: String(item.delivery_date || ""), order_from: String(item.order_from || ""),
+    visible_until: String(item.visible_until || ""), includes: String(item.includes || ""),
+    published: item.published === false ? false : true
+  };
+  const row = lookup.map(function (h) { return Object.prototype.hasOwnProperty.call(values, h) ? values[h] : ""; });
+  if (existing) sheet.getRange(existing.row, 1, 1, headers.length).setValues([row]);
+  else sheet.appendRow(row);
+  return json_({ ok: true, items: readInventory_().items, discounts: readDiscounts_() });
+}
+
+function deleteItem_(idValue) {
+  const id = String(idValue || "").trim();
+  const item = readInventory_().byId[id];
+  if (!item) throw new Error("Item not found.");
+  SpreadsheetApp.getActive().getSheetByName(INVENTORY_TAB).deleteRow(item.row);
+  return json_({ ok: true, items: readInventory_().items, discounts: readDiscounts_() });
+}
+
+function saveDiscount_(discount) {
+  const code = String(discount.code || "").trim().toUpperCase();
+  const type = String(discount.type || "").toLowerCase();
+  const value = Number(discount.value);
+  const minimum = Number(discount.minimum_subtotal || 0);
+  if (!/^[A-Z0-9_-]{3,24}$/.test(code) || !["percent", "fixed"].includes(type) || !isFinite(value) || value <= 0 || (type === "percent" && value > 100) || minimum < 0) {
+    throw new Error("Enter a valid code, discount type and value.");
+  }
+  let sheet = SpreadsheetApp.getActive().getSheetByName(DISCOUNTS_TAB);
+  if (!sheet) sheet = SpreadsheetApp.getActive().insertSheet(DISCOUNTS_TAB);
+  const headers = ensureHeaders_(sheet, DISCOUNT_HEADERS);
+  const lookup = headers.map(function (h) { return String(h).trim().toLowerCase(); });
+  const lastRow = sheet.getLastRow();
+  let target = 0;
+  let uses = 0;
+  if (lastRow > 1) {
+    const rows = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+    rows.forEach(function (row, i) {
+      const codeIndex = lookup.indexOf("code");
+      if (String(row[codeIndex] || "").trim().toUpperCase() === code) {
+        target = i + 2;
+        const usesIndex = lookup.indexOf("uses");
+        uses = usesIndex < 0 ? 0 : Number(row[usesIndex]) || 0;
+      }
+    });
+  }
+  const values = {
+    code: code, type: type, value: value, minimum_subtotal: minimum, active: discount.active !== false,
+    starts_at: String(discount.starts_at || ""), ends_at: String(discount.ends_at || ""),
+    item_ids: String(discount.item_ids || ""), category_ids: String(discount.category_ids || ""),
+    max_uses: discount.max_uses == null || discount.max_uses === "" ? "" : Number(discount.max_uses), uses: uses
+  };
+  const row = lookup.map(function (h) { return Object.prototype.hasOwnProperty.call(values, h) ? values[h] : ""; });
+  if (target) sheet.getRange(target, 1, 1, headers.length).setValues([row]); else sheet.appendRow(row);
+  return json_({ ok: true, items: readInventory_().items, discounts: readDiscounts_() });
+}
+
+function deleteDiscount_(codeValue) {
+  const code = String(codeValue || "").trim().toUpperCase();
+  const sheet = SpreadsheetApp.getActive().getSheetByName(DISCOUNTS_TAB);
+  if (!sheet || sheet.getLastRow() < 2) throw new Error("Discount not found.");
+  const headers = ensureHeaders_(sheet, DISCOUNT_HEADERS).map(function (h) { return String(h).trim().toLowerCase(); });
+  const index = headers.indexOf("code");
+  const values = sheet.getRange(2, index + 1, sheet.getLastRow() - 1, 1).getValues();
+  const offset = values.findIndex(function (r) { return String(r[0]).trim().toUpperCase() === code; });
+  if (offset < 0) throw new Error("Discount not found.");
+  sheet.deleteRow(offset + 2);
+  return json_({ ok: true, items: readInventory_().items, discounts: readDiscounts_() });
+}
+
+function uploadImage_(body) {
+  const mime = String(body.mimeType || "");
+  const encoded = String(body.data || "");
+  if (!["image/jpeg", "image/png", "image/webp"].includes(mime) || !encoded || encoded.length > 3800000) throw new Error("Choose a JPG, PNG or WebP image under 2.5 MB.");
+  const bytes = Utilities.base64Decode(encoded);
+  const blob = Utilities.newBlob(bytes, mime, String(body.name || "menu-image").slice(0, 100));
+  const folderId = PropertiesService.getScriptProperties().getProperty("INVENTORY_IMAGE_FOLDER_ID");
+  const file = folderId ? DriveApp.getFolderById(folderId).createFile(blob) : DriveApp.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return json_({ ok: true, url: "https://drive.google.com/uc?export=view&id=" + file.getId() });
 }
 
 // Blank counts as "yes" so new rows show up unless you untick them.
@@ -169,9 +362,31 @@ function appendOrder_(o) {
     a.lat != null ? "https://maps.google.com/?q=" + Number(a.lat) + "," + Number(a.lng) : "",
     safe_(items), num_(t.sub), num_(t.delivery), num_(t.tax), num_(t.total), safe_(o.payment), safe_(o.notes)
   ];
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const headers = ensureHeaders_(sheet, ORDER_HEADERS);
   row[headers.indexOf("Fulfillment")] = safe_(o.fulfillment || "delivery");
+  row[headers.indexOf("Discount code")] = safe_(o.discountCode || "");
+  row[headers.indexOf("Discount")] = num_(t.discount);
   sheet.appendRow(row);
+}
+
+function discountAvailable_(codeValue) {
+  const code = String(codeValue || "").trim().toUpperCase();
+  if (!code) return true;
+  const discount = readDiscounts_().filter(function (d) { return d.code === code && d.active; })[0];
+  return !!discount && (discount.max_uses == null || discount.uses < discount.max_uses);
+}
+
+function consumeDiscount_(codeValue) {
+  const code = String(codeValue || "").trim().toUpperCase();
+  if (!code) return;
+  const sheet = SpreadsheetApp.getActive().getSheetByName(DISCOUNTS_TAB);
+  if (!sheet || sheet.getLastRow() < 2) return;
+  const headers = ensureHeaders_(sheet, DISCOUNT_HEADERS).map(function (h) { return String(h).trim().toLowerCase(); });
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues();
+  const ci = headers.indexOf("code"), ui = headers.indexOf("uses");
+  rows.forEach(function (row, i) {
+    if (String(row[ci] || "").trim().toUpperCase() === code) sheet.getRange(i + 2, ui + 1).setValue((Number(row[ui]) || 0) + 1);
+  });
 }
 
 // Customer text must never be treated as a spreadsheet formula.
@@ -205,6 +420,7 @@ function emailCustomer_(o) {
         items,
         "",
         "Item total: ₹" + t.sub,
+        t.discount ? "Discount" + (o.discountCode ? " (" + o.discountCode + ")" : "") + ": -₹" + t.discount : "",
         "Delivery: " + delivery,
         "GST: ₹" + t.tax,
         "To pay: ₹" + t.total,
@@ -238,9 +454,9 @@ function setup() {
       inv = ss.insertSheet(INVENTORY_TAB);
     }
   }
-  if (inv.getLastRow() === 0) inv.appendRow(INVENTORY_HEADERS);
+  ensureHeaders_(inv, INVENTORY_HEADERS);
   inv.setFrozenRows(1);
-  inv.getRange(1, 1, 1, INVENTORY_HEADERS.length).setFontWeight("bold").setBackground("#7b1626").setFontColor("#ffffff");
+  inv.getRange(1, 1, 1, inv.getLastColumn()).setFontWeight("bold").setBackground("#7b1626").setFontColor("#ffffff");
 
   // Only rows that already have items get tick boxes, so a row you add later
   // with "available" left blank still counts as available.
@@ -275,7 +491,13 @@ function setup() {
     );
     inv.setConditionalFormatRules(rules);
   }
-  inv.autoResizeColumns(1, INVENTORY_HEADERS.length);
+  inv.autoResizeColumns(1, inv.getLastColumn());
+
+  let discounts = ss.getSheetByName(DISCOUNTS_TAB);
+  if (!discounts) discounts = ss.insertSheet(DISCOUNTS_TAB);
+  ensureHeaders_(discounts, DISCOUNT_HEADERS);
+  discounts.setFrozenRows(1);
+  discounts.getRange(1, 1, 1, discounts.getLastColumn()).setFontWeight("bold").setBackground("#7b1626").setFontColor("#ffffff");
 
   let orders = ss.getSheetByName(ORDERS_TAB);
   if (!orders) {
@@ -284,6 +506,12 @@ function setup() {
   }
   orders.setFrozenRows(1);
   orders.getRange(1, 1, 1, ORDER_HEADERS.length).setFontWeight("bold").setBackground("#7b1626").setFontColor("#ffffff");
+}
+
+// Run once manually in Apps Script to grant the Drive permission needed for
+// photo uploads from the private inventory portal.
+function authorizeDrive() {
+  DriveApp.getRootFolder().getName();
 }
 
 function columnLetter_(n) {

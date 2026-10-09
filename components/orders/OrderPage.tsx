@@ -49,7 +49,13 @@ export default function OrderPage() {
             </div>
           </div>
         ))}
-        <div className="bill"><div className="row total"><span>Total</span><span>{money(o.totals.total)}</span></div></div>
+        <div className="bill">
+          <div className="row"><span>Items</span><span>{money(o.totals.sub)}</span></div>
+          {o.totals.discount ? <div className="row off"><span>Discount{o.discountCode ? ` · ${o.discountCode}` : ""}</span><span>−{money(o.totals.discount)}</span></div> : null}
+          {o.totals.delivery ? <div className="row"><span>Delivery</span><span>{money(o.totals.delivery)}</span></div> : null}
+          {o.totals.tax ? <div className="row"><span>GST</span><span>{money(o.totals.tax)}</span></div> : null}
+          <div className="row total"><span>Total</span><span>{money(o.totals.total)}</span></div>
+        </div>
       <p className="sub" style={{ marginTop: 12 }}>📍 {o.fulfillment === "pickup" ? "Pickup at " : "Deliver to "}{o.address.line}{o.address.map ? `, ${o.address.map}` : ""}</p>
       </div>
       <Link className="btn ghost block" href="/orders/">Back to menu</Link>

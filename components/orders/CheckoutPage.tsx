@@ -7,6 +7,7 @@ import { resolveDeliveryZone } from "@/lib/order-store/area";
 import { hourLabel, money } from "@/lib/order-store/format";
 import { sendOrder } from "@/lib/order-store/order";
 import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
+import { discountForCode } from "@/lib/order-store/pricing";
 import { buildSlots, deliveryPlan, fmtDay, pastCutoff } from "@/lib/order-store/schedule";
 import { save, load } from "@/lib/order-store/storage";
 import type { Order } from "@/lib/order-store/types";
@@ -24,7 +25,7 @@ export default function CheckoutPage() {
 
 function CheckoutForm() {
   const shop = useShop();
-  const { cart, catalog, now: shopNow, address, openAddress, customer, setCustomer,
+  const { cart, catalog, discounts, now: shopNow, address, openAddress, customer, setCustomer,
     fulfillmentMode, toast, applyInventory, setCartNotice, clearCart, refreshInventory, checkoutOrderId, resetCheckoutOrderId } = shop;
   const router = useRouter();
 
@@ -34,6 +35,9 @@ function CheckoutForm() {
     house: customer.house || "", landmark: customer.landmark || "", notes: ""
   }));
   const [showNotes, setShowNotes] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
+  const [couponMessage, setCouponMessage] = useState("");
   const payment = "RAZORPAY" as const;
   const [dayIdx, setDayIdx] = useState(0);
   const [slot, setSlot] = useState("");
@@ -45,7 +49,8 @@ function CheckoutForm() {
   const fieldRefs = useRef<Partial<Record<Field, HTMLDivElement | null>>>({});
 
   const zone = resolveDeliveryZone(address, fulfillmentMode);
-  const t = totals(cart, catalog.items, fulfillmentMode, zone);
+  const selectedDiscount = discountForCode(appliedCode, discounts);
+  const t = totals(cart, catalog.items, fulfillmentMode, zone, selectedDiscount);
   const showActualsNote = fulfillmentMode === "delivery" && zone === "actuals";
   const plan = useMemo(() => deliveryPlan(cart, catalog.items, now), [cart, catalog.items, now]);
   const days = useMemo(() => buildSlots(plan), [plan]);
@@ -114,7 +119,8 @@ function CheckoutForm() {
         return { id: item.id, name: item.name, options: selLabel(item, l.sel), qty: l.qty, price: unitPrice(item, l.sel) * l.qty };
       }),
       notes: v("notes"),
-      totals: { sub: t.sub, delivery: t.delivery, tax: t.tax, total: t.total }
+      discountCode: selectedDiscount && t.discount ? selectedDiscount.code : undefined,
+      totals: { sub: t.sub, discount: t.discount, delivery: t.delivery, tax: t.tax, total: t.total }
     };
 
     if (payment === "RAZORPAY") {
@@ -128,6 +134,7 @@ function CheckoutForm() {
             fulfillment: fulfillmentMode,
             addressText: fulfillmentMode === "delivery" ? address?.text || "" : "",
             zone,
+            discountCode: selectedDiscount && t.discount ? selectedDiscount.code : "",
             customer: { name: c.name, email: c.email, phone: c.phone },
           }),
         });
@@ -235,6 +242,17 @@ function CheckoutForm() {
   return (
     <>
       <form className="page" id="checkoutForm" noValidate onSubmit={submit}>
+        <div className="field coupon-field">
+          <label htmlFor="discountCode">Discount code</label>
+          <div className="coupon-entry"><input id="discountCode" value={discountCode} onChange={(e) => { setDiscountCode(e.target.value.toUpperCase()); setAppliedCode(""); setCouponMessage(""); }} placeholder="Enter a code" autoCapitalize="characters" /><button type="button" className="btn ghost" onClick={() => {
+            if (!discountCode.trim()) { setCouponMessage("Enter a discount code first."); return; }
+            const rule = discountForCode(discountCode, discounts);
+            const amount = rule ? totals(cart, catalog.items, fulfillmentMode, zone, rule).discount : 0;
+            if (amount) { setAppliedCode(rule!.code); setCouponMessage(`Code applied. You save ${money(amount)}.`); }
+            else { setAppliedCode(""); setCouponMessage("That code is invalid, expired, or not valid for this order."); }
+          }}>{appliedCode ? "Apply again" : "Apply"}</button></div>
+          {couponMessage ? <p className={`coupon-message${t.discount ? " success" : ""}`} role="status">{couponMessage}</p> : null}
+        </div>
         <div className="field">
           <span className="lbl">{fulfillmentMode === "pickup" ? "Pickup Date & Slot" : "Delivery Date & Slot"} <span className="req">*</span></span>
           {plan.fixed ? (

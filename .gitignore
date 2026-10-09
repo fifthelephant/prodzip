@@ -2,6 +2,7 @@ node_modules
 .verify
 .next
 .next-build
+*.tsbuildinfo
 out
 .DS_Store
 *.log

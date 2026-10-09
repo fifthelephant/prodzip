@@ -68,6 +68,29 @@ export interface InventoryRow {
   badge?: string;
   image?: string;
   shelf_life?: string;
+  options_json?: string;
+  emoji?: string;
+  veg?: boolean;
+  unit?: string;
+  delivery_date?: string;
+  order_from?: string;
+  visible_until?: string;
+  includes?: string;
+  published?: boolean;
+}
+
+export interface DiscountRule {
+  code: string;
+  type: "percent" | "fixed";
+  value: number;
+  minimum_subtotal?: number;
+  active?: boolean;
+  starts_at?: string;
+  ends_at?: string;
+  item_ids?: string;
+  category_ids?: string;
+  max_uses?: number | null;
+  uses?: number;
 }
 
 export interface CartLine {
@@ -100,6 +123,7 @@ export interface Customer {
 
 export interface Totals {
   sub: number;
+  discount: number;
   delivery: number;
   tax: number;
   total: number;
@@ -118,7 +142,8 @@ export interface Order {
   address: { line: string; landmark?: string; map: string; lat: number | null; lng: number | null };
   items: { id: string; name: string; options: string; qty: number; price: number }[];
   notes: string;
-  totals: { sub: number; delivery: number; tax: number; total: number };
+  discountCode?: string;
+  totals: { sub: number; discount: number; delivery: number; tax: number; total: number };
 }
 
 export interface StoreConfig {

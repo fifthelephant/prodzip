@@ -30,12 +30,20 @@ export function buildCatalog(inventory: InventoryRow[] | null): Catalog {
   } else {
     cats = MENU.map((c) => ({ id: c.id, name: c.name, subtitle: c.subtitle, items: [] }));
     inventory.forEach((row) => {
+      if (row.published === false) return;
       const b: Partial<MenuItem> = base[row.id] || {};
       const catName = row.category || cats.find((c) => c.id === b.category)?.name || "More";
       let cat = cats.find((c) => c.name.toLowerCase() === catName.toLowerCase() || c.id === catName.toLowerCase());
       if (!cat) {
         cat = { id: slug(catName) || "more", name: catName, items: [] };
         cats.push(cat);
+      }
+      let options = b.options;
+      if (row.options_json) {
+        try {
+          const parsed = JSON.parse(row.options_json);
+          if (Array.isArray(parsed)) options = parsed;
+        } catch { /* A malformed optional field falls back to the built-in choices. */ }
       }
       cat.items.push({
         ...b,
@@ -47,7 +55,14 @@ export function buildCatalog(inventory: InventoryRow[] | null): Catalog {
         shelfLife: row.shelf_life || b.shelfLife || "",
         // The Sheet's image column can hold one link or several, separated by commas.
         images: row.image ? row.image.split(/[\s,]+/).filter(Boolean) : b.images,
-        emoji: b.emoji || "🍬",
+        emoji: row.emoji || b.emoji || "🍬",
+        veg: typeof row.veg === "boolean" ? row.veg : b.veg,
+        options,
+        unit: row.unit || b.unit,
+        deliveryDate: row.delivery_date || b.deliveryDate,
+        orderFrom: row.order_from || b.orderFrom,
+        visibleUntil: row.visible_until || b.visibleUntil,
+        includes: row.includes ? row.includes.split(/\r?\n|\s*\|\s*/).map((x) => x.trim()).filter(Boolean) : b.includes,
         stock: typeof row.stock === "number" ? row.stock : null,
         soldOut: row.available === false || row.stock === 0,
         unavailable: row.available === false,

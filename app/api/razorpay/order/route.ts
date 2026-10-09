@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { STORE } from "@/data/order-store/config";
 import { detectDeliveryZone } from "@/lib/order-store/area";
 import { buildCatalog } from "@/lib/order-store/catalog";
-import { totals, unitPrice } from "@/lib/order-store/pricing";
-import type { CartLine, InventoryRow } from "@/lib/order-store/types";
+import { discountForCode, totals, unitPrice } from "@/lib/order-store/pricing";
+import type { CartLine, DiscountRule, InventoryRow } from "@/lib/order-store/types";
 
 export const runtime = "nodejs";
 
@@ -21,6 +21,7 @@ export async function POST(request: Request) {
     addressText?: string;
     zone?: "gurugram" | "actuals" | "unknown";
     customer?: { name?: string; email?: string; phone?: string };
+    discountCode?: string;
   } | null;
   if (!body || !Array.isArray(body.lines) || !body.lines.length || body.lines.length > 40 || !body.receipt || !/^[A-Za-z0-9_-]{1,40}$/.test(body.receipt)) {
     return NextResponse.json({ error: "Invalid order details." }, { status: 400 });
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
   }
 
   let inventory: InventoryRow[] | null = null;
+  let discounts: DiscountRule[] = [];
   if (STORE.backendUrl) {
     const url = new URL(STORE.backendUrl);
     url.searchParams.set("payment-check", Date.now().toString());
@@ -40,6 +42,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "We couldn't verify the live menu. Please try again." }, { status: 503 });
     }
     inventory = sheet.items;
+    discounts = Array.isArray(sheet.discounts) ? sheet.discounts : [];
   }
 
   const { items } = buildCatalog(inventory);
@@ -67,7 +70,9 @@ export async function POST(request: Request) {
   const zone = fulfillment === "delivery"
     ? (zoneFromText !== "unknown" ? zoneFromText : body.zone === "gurugram" || body.zone === "actuals" ? body.zone : "unknown")
     : "unknown";
-  const priced = totals(body.lines, items, fulfillment, zone);
+  const discount = discountForCode(typeof body.discountCode === "string" ? body.discountCode : "", discounts);
+  const priced = totals(body.lines, items, fulfillment, zone, discount);
+  if (body.discountCode && !priced.discount) return NextResponse.json({ error: "That discount code is invalid or no longer applies to this order." }, { status: 400 });
   const amount = Math.round(priced.total * 100);
 
   const response = await fetch("https://api.razorpay.com/v1/orders", {

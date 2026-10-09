@@ -1,6 +1,6 @@
 import { STORE } from "@/data/order-store/config";
 import { money } from "./format";
-import type { InventoryRow, Order } from "./types";
+import type { DiscountRule, InventoryRow, Order } from "./types";
 
 /** The WhatsApp message sent to the shop for an order. */
 export function whatsappText(o: Order): string {
@@ -11,6 +11,7 @@ export function whatsappText(o: Order): string {
     ...o.items.map((i) => `• ${i.qty} × ${i.name}${i.options ? ` (${i.options})` : ""} — ${money(i.price)}`),
     "",
     `Sub total: ${money(o.totals.sub)}`,
+    o.totals.discount ? `Discount${o.discountCode ? ` (${o.discountCode})` : ""}: −${money(o.totals.discount)}` : "",
     `Delivery: ${o.fulfillment === "pickup" ? "Not applicable" : o.totals.delivery ? money(o.totals.delivery) : "On actuals"}`,
     `GST: ${money(o.totals.tax)}`,
     `*To pay: ${money(o.totals.total)}* (${o.payment === "RAZORPAY" ? "Razorpay · paid online" : o.payment === "UPI" ? "UPI" : `Cash/UPI on ${o.fulfillment === "pickup" ? "pickup" : "delivery"}`})`,
@@ -53,10 +54,10 @@ export async function sendOrder(order: Order): Promise<BackendResult> {
   return r.json();
 }
 
-export async function fetchInventory(): Promise<InventoryRow[]> {
+export async function fetchInventory(): Promise<{ items: InventoryRow[]; discounts: DiscountRule[] }> {
   const url = STORE.backendUrl + (STORE.backendUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
   const r = await fetch(url);
   const j = await r.json();
   if (!j.ok || !Array.isArray(j.items)) throw new Error("bad inventory");
-  return j.items;
+  return { items: j.items, discounts: Array.isArray(j.discounts) ? j.discounts : [] };
 }
