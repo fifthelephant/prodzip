@@ -40,6 +40,7 @@ interface ShopContext {
   clearCart: () => void;
   address: Address | null;
   setAddress: (a: Address) => void;
+  clearAddress: () => void;
   fulfillmentMode: FulfillmentMode;
   setFulfillmentMode: (mode: FulfillmentMode) => void;
   customer: Customer;
@@ -134,11 +135,23 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
 
   const toast = useCallback((msg: string) => setToastState((t) => ({ msg, n: t.n + 1 })), []);
 
+  const clearAddress = useCallback(() => {
+    setAddressState(null);
+    save("address", null);
+    setCustomerState((current) => {
+      if (!current.house && !current.landmark) return current;
+      const next = { ...current, house: "", landmark: "" };
+      save("customer", next);
+      return next;
+    });
+  }, []);
+
   const commitCart = useCallback((next: CartLine[]) => {
     cartRef.current = next;
     setCartState(next);
     save("cart", next);
-  }, []);
+    if (!next.length) clearAddress();
+  }, [clearAddress]);
 
   const setCatalogBoth = useCallback((c: Catalog) => {
     catalogRef.current = c;
@@ -273,8 +286,6 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     return key;
   }, [commitCart, roomFor, toast]);
 
-  const clearSavedAddress = useCallback(() => { setAddressState(null); save("address", null); }, []);
-
   const setQty = useCallback((key: string, qty: number) => {
     const cur = cartRef.current;
     const line = cur.find((l) => l.key === key);
@@ -285,12 +296,10 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
       toast(item && hasStockLimit(item) ? `Only ${item.stock} left in stock` : "Sorry, this item is sold out");
       qty = max;
     }
-    const next = qty <= 0 ? cur.filter((l) => l.key !== key) : cur.map((l) => (l.key === key ? { ...l, qty } : l));
-    commitCart(next);
-    if (!next.length) clearSavedAddress();
-  }, [clearSavedAddress, commitCart, roomFor, toast]);
+    commitCart(qty <= 0 ? cur.filter((l) => l.key !== key) : cur.map((l) => (l.key === key ? { ...l, qty } : l)));
+  }, [commitCart, roomFor, toast]);
 
-  const clearCart = useCallback(() => { commitCart([]); clearSavedAddress(); }, [clearSavedAddress, commitCart]);
+  const clearCart = useCallback(() => commitCart([]), [commitCart]);
 
   const setAddress = useCallback((a: Address) => { setAddressState(a); save("address", a); }, []);
   const setFulfillmentMode = useCallback((mode: FulfillmentMode) => { setFulfillmentModeState(mode); save("fulfillment", mode); }, []);
@@ -337,13 +346,13 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     ready, inventoryFailed, retryInventory, now, catalog, discounts, payments, charges, cart,
     cartCount: cart.reduce((a, l) => a + l.qty, 0), bump,
     qtyOf: (id) => qtyOfItem(cart, id), roomFor, addToCart, setQty, clearCart,
-    address, setAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, setCartNotice,
+    address, setAddress, clearAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, setCartNotice,
     applyInventory, refreshInventory, toast, toastState,
     addressOpen, openAddress, closeAddress, drawerOpen, setDrawerOpen,
     filters, setFilters, searchText, setSearchText, collapsed, setCollapsed, showSearch, setShowSearch, showFilters, setShowFilters,
     getMenuScroll, saveMenuScroll, takePendingJump, jumpTick, jumpTo, checkoutOrderId, resetCheckoutOrderId
   }), [ready, inventoryFailed, retryInventory, now, catalog, discounts, payments, charges, cart, bump, roomFor, addToCart, setQty, clearCart,
-    address, setAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, applyInventory, refreshInventory, toast, toastState,
+    address, setAddress, clearAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, applyInventory, refreshInventory, toast, toastState,
     addressOpen, openAddress, closeAddress, drawerOpen, setDrawerOpen, filters, searchText, collapsed, showSearch, showFilters,
     getMenuScroll, saveMenuScroll, takePendingJump, jumpTick, jumpTo, checkoutOrderId, resetCheckoutOrderId]);
 

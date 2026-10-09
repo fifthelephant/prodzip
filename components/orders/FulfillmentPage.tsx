@@ -12,13 +12,14 @@ const modes: { id: FulfillmentMode; icon: string; title: string; copy: string; a
 ];
 
 export default function FulfillmentPage() {
-  const { setFulfillmentMode, openAddress } = useShop();
+  const { setFulfillmentMode, openAddress, clearAddress } = useShop();
   const router = useRouter();
   useEffect(() => { document.title = `Choose how to order · ${STORE.name}`; }, []);
 
   function choose(mode: FulfillmentMode) {
     setFulfillmentMode(mode);
     if (mode === "delivery") {
+      clearAddress();
       openAddress(() => router.push("/orders/"));
       return;
     }
