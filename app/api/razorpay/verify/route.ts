@@ -9,9 +9,9 @@ export async function POST(request: Request) {
   if (!keyId || !keySecret) return NextResponse.json({ error: "Online payment is not configured yet." }, { status: 503 });
 
   const body = await request.json().catch(() => null) as {
-    orderId?: string; paymentId?: string; signature?: string; amount?: number;
+    orderId?: string; merchantOrderId?: string; paymentId?: string; signature?: string; amount?: number;
   } | null;
-  if (!body?.orderId || !body.paymentId || !body.signature || !Number.isSafeInteger(body.amount)) {
+  if (!body?.orderId || !body.merchantOrderId || !/^MK[A-Za-z0-9_-]{4,60}$/.test(body.merchantOrderId) || !body.paymentId || !body.signature || !Number.isSafeInteger(body.amount)) {
     return NextResponse.json({ error: "Payment details are incomplete." }, { status: 400 });
   }
 
@@ -33,5 +33,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "The payment amount or status could not be confirmed." }, { status: 400 });
   }
 
-  return NextResponse.json({ ok: true });
+  const proofPayload = Buffer.from(JSON.stringify({
+    orderId: body.merchantOrderId,
+    paymentId: body.paymentId,
+    amount: body.amount,
+    exp: Date.now() + 10 * 60 * 1000,
+  })).toString("base64url");
+  const paymentProof = `${proofPayload}.${createHmac("sha256", keySecret).update(`csv-order-confirmation:${proofPayload}`).digest("hex")}`;
+  return NextResponse.json({ ok: true, paymentProof });
 }

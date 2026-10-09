@@ -2,8 +2,8 @@ import { MENU } from "@/data/order-store/menu";
 import ItemPage from "@/components/orders/ItemPage";
 
 // One page per menu item, built ahead of time (static export).
-// Items added only in the Google Sheet (with no entry in data/menu.ts) don't
-// get their own page; add them to data/menu.ts as well.
+// Items added through inventory (with no built-in detail route) use the
+// generic item page instead.
 export const dynamicParams = false;
 
 export function generateStaticParams() {

@@ -1,7 +1,7 @@
 "use client";
 
-// All shared state lives here: the menu (with live stock from the Google
-// Sheet), the cart, the customer's address and details, toasts, and a few
+// All shared state lives here: the menu (with live stock from the CSV API),
+// the cart, the customer's address and details, toasts, and a few
 // bits of menu UI state that should survive moving between pages.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -141,7 +141,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     setCatalog(c);
   }, []);
 
-  /** Apply fresh stock from the Sheet: rebuild the menu and fix the cart. */
+  /** Apply fresh stock from CSV: rebuild the menu and fix the cart. */
   const applyInventory = useCallback((rows: InventoryRow[]) => {
     const c = buildCatalog(rows);
     setCatalogBoth(c);
@@ -154,7 +154,6 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   }, [commitCart, setCatalogBoth]);
 
   const refreshInventory = useCallback((): Promise<void> => {
-    if (!STORE.backendUrl) return Promise.resolve();
     if (refreshing.current) return refreshing.current;
     refreshing.current = (async () => {
       const before = JSON.stringify({ items: load<InventoryRow[] | null>("inventory", null), discounts: load<DiscountRule[]>("discounts", []) });
@@ -196,11 +195,6 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     setCustomerState(load<Customer>("customer", {}));
     loadedRef.current = true;
 
-    if (!STORE.backendUrl) {
-      setCatalogBoth(buildCatalog(null));
-      setReady(true);
-      return;
-    }
     const cached = load<InventoryRow[] | null>("inventory", null);
     if (Array.isArray(cached)) {
       setCatalogBoth(buildCatalog(cached));

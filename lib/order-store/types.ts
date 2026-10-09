@@ -56,7 +56,7 @@ export interface Category {
   items: MenuItem[];
 }
 
-/** One row of the Google Sheet's Inventory tab, as sent by backend/Code.gs. */
+/** One row in data/inventory.csv, as served by the CSV inventory API. */
 export interface InventoryRow {
   id: string;
   name?: string;
@@ -172,7 +172,6 @@ export interface StoreConfig {
   deliveryAreas: string[];
   serviceBox: { north: number; south: number; west: number; east: number };
   shop: { lat: number; lng: number };
-  backendUrl: string;
   lowStockAt: number;
   refreshSeconds: number;
 }

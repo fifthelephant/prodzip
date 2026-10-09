@@ -22,9 +22,11 @@ For day-to-day editing, `npm run dev` starts a local preview that reloads as you
 - `/orders` opens online ordering. Cart, item, checkout and order confirmation pages live below `/orders`.
 - `/occasions` is labelled **Catering** in navigation and links to the quote form.
 
-## Ordering integrations
+## Menu and inventory data
 
-Set `NEXT_PUBLIC_BACKEND_URL` to the deployed Google Apps Script web-app URL to sync inventory and record orders in Google Sheets. The setup instructions are in `backend/order-store/SETUP.md`.
+The store uses CSV files in `data/` for the live menu, stock, discounts, and orders. The private portal at `/admin/inventorymanagement` updates these files; customer pages and checkout read from the same CSV-backed API. Google Sheets credentials are not required. See [`backend/order-store/SETUP.md`](backend/order-store/SETUP.md) for local and persistent production setup.
+
+On a production VM, set `MK_DATA_DIR` and `MK_UPLOAD_DIR` to durable writable folders outside the deployment checkout so menu edits, orders, and uploaded photos survive code updates. Local and production use the same format and code, with separate files by default.
 
 Set `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` in the server environment to enable the Razorpay checkout. `COD` remains available without those credentials. Do not put the Razorpay secret in a `NEXT_PUBLIC_` variable.
 
@@ -37,7 +39,7 @@ All image paths live in `content/images.ts`.
 
 ## Change the menu
 
-Edit dish names and categories in `content/menu.ts`. The Menu page reads that file.
+Use `/admin/inventorymanagement` to add and update the live menu without changing code. `data/starter-inventory.csv` is the checked-in menu migrated from the existing starter catalog; the server copies it to the runtime `data/inventory.csv` on first use.
 
 ## Change contact details and wording
 

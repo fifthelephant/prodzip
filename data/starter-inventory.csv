@@ -1,0 +1,94 @@
+id,name,category,description,price,stock,available,published,badge,image,shelf_life,options_json,emoji,veg,unit,delivery_date,order_from,visible_until,includes
+navratri-thali-day-1,Navratri Thali · Day 1,Navratri Thalis,Akhrot Arbi Tikki – 2 · Aloo Anar Chaat · Paneer Mircha Sabji · Dahi Wali Arbi · Kuttu Puri – 5 · Makhana Kheer · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,images/navratri-thali-day-1.webp,,,🍱,true,,2026-10-11,2026-10-07,2026-10-19,"Akhrot Arbi Tikki – 2
+Aloo Anar Chaat
+Paneer Mircha Sabji
+Dahi Wali Arbi
+Kuttu Puri – 5
+Makhana Kheer
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+navratri-thali-day-2,Navratri Thali · Day 2,Navratri Thalis,Kaccha Kela Tikki – 2 · Shakarkandi Chaat · Angoor Makhana Sabji · Aloo Tamatar Sabji · Kuttu Paratha – 3 · Aloo Halwa · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,images/navratri-thali-day-2.webp,,,🍱,true,,2026-10-12,,2026-10-19,"Kaccha Kela Tikki – 2
+Shakarkandi Chaat
+Angoor Makhana Sabji
+Aloo Tamatar Sabji
+Kuttu Paratha – 3
+Aloo Halwa
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+navratri-thali-day-3,Navratri Thali · Day 3,Navratri Thalis,Sabudana Tikki – 2 · Fruit & Anar Chaat · Kele Kofta Curry · Paneer Makhana Sabji · Kuttu Puri – 5 · Nariyal Laddu – 1 · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,images/navratri-thali-day-3.webp,,,🍱,true,,2026-10-13,,2026-10-19,"Sabudana Tikki – 2
+Fruit & Anar Chaat
+Kele Kofta Curry
+Paneer Makhana Sabji
+Kuttu Puri – 5
+Nariyal Laddu – 1
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+navratri-thali-day-4,Navratri Thali · Day 4,Navratri Thalis,Kacche Kele Badam Tikki – 2 · Aloo Anar Raita · Sukhi Arbi · Dahi Wale Aloo · Kuttu Paratha – 3 · Sabudana Kheer · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,images/navratri-thali-day-4.webp,,,🍱,true,,2026-10-14,,2026-10-19,"Kacche Kele Badam Tikki – 2
+Aloo Anar Raita
+Sukhi Arbi
+Dahi Wale Aloo
+Kuttu Paratha – 3
+Sabudana Kheer
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+navratri-thali-day-5,Navratri Thali · Day 5,Navratri Thalis,Arbi Walnut Tikki – 2 · Shakarkandi Chaat · Paneer Mircha Sabji · Vrat Wale Aloo Tamatar · Kuttu Puri – 5 · Aloo Ka Halwa · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,images/navratri-thali-day-5.webp,,,🍱,true,,2026-10-15,,2026-10-19,"Arbi Walnut Tikki – 2
+Shakarkandi Chaat
+Paneer Mircha Sabji
+Vrat Wale Aloo Tamatar
+Kuttu Puri – 5
+Aloo Ka Halwa
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+navratri-thali-day-6,Navratri Thali · Day 6,Navratri Thalis,Sabudana Khichdi · Fruit Chaat · Dahi Wale Aloo · Hari Chutney Paneer · Kuttu Paratha – 3 · Nariyal Laddu – 1 · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,,,,🍱,true,,2026-10-16,,2026-10-19,"Sabudana Khichdi
+Fruit Chaat
+Dahi Wale Aloo
+Hari Chutney Paneer
+Kuttu Paratha – 3
+Nariyal Laddu – 1
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+navratri-thali-day-7,Navratri Thali · Day 7,Navratri Thalis,Kacche Kele Ka Kofta – 2 · Aloo Anar Raita · Makhana Kaju Curry · Sukhi Arbi · Kuttu Puri – 5 · Samak Rice Kheer · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,,,,🍱,true,,2026-10-17,,2026-10-19,"Kacche Kele Ka Kofta – 2
+Aloo Anar Raita
+Makhana Kaju Curry
+Sukhi Arbi
+Kuttu Puri – 5
+Samak Rice Kheer
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+navratri-thali-day-8,Navratri Thali · Day 8,Navratri Thalis,Kaccha Kela Peanut Tikki – 2 · Shakarkandi Anar Chaat · Paneer Anardana Sabji · Dahi Wale Aloo · Kuttu Paratha – 3 · Nariyal Burfi – 1 · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,,,,🍱,true,,2026-10-18,,2026-10-19,"Kaccha Kela Peanut Tikki – 2
+Shakarkandi Anar Chaat
+Paneer Anardana Sabji
+Dahi Wale Aloo
+Kuttu Paratha – 3
+Nariyal Burfi – 1
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+navratri-thali-day-9,Navratri Thali · Day 9 (Navratri Finale) 🌸,Navratri Thalis,Kala Chana · Jhol Ke Aloo · Poori · Chawal Ki Kheer · Sooji Halwa · Sabudana Papad – 1 · Green Chutney + Mukhwas,750,,true,true,,,,,🍱,true,,2026-10-19,,2026-10-19,"Kala Chana
+Jhol Ke Aloo
+Poori
+Chawal Ki Kheer
+Sooji Halwa
+Sabudana Papad – 1
+Green Chutney + Mukhwas"
+besan-halwa,Besan Halwa,Halwa (Per Kg),Classic besan halwa. Priced per kg.,1500,,true,true,,images/besan-halwa.webp,5 days,"[{""name"":""Select weight"",""required"":true,""max"":1,""choices"":[{""label"":""500 g"",""factor"":0.5},{""label"":""1 kg"",""factor"":1}]}]",🟨,true,kg,,,,
+moong-dal-halwa,Moong Dal Halwa,Halwa (Per Kg),Traditional moong dal halwa. Priced per kg.,1500,,true,true,POPULAR,images/moong-dal-halwa.webp,5 days,"[{""name"":""Select weight"",""required"":true,""max"":1,""choices"":[{""label"":""500 g"",""factor"":0.5},{""label"":""1 kg"",""factor"":1}]}]",🟧,true,kg,,,,
+badam-halwa,Badam Halwa,Halwa (Per Kg),Rich almond halwa. Priced per kg.,2500,,true,true,,images/badam-halwa.webp,7 days,"[{""name"":""Select weight"",""required"":true,""max"":1,""choices"":[{""label"":""500 g"",""factor"":0.5},{""label"":""1 kg"",""factor"":1}]}]",🌰,true,kg,,,,
+walnut-halwa,Walnut Halwa,Halwa (Per Kg),Walnut halwa. Priced per kg.,3000,,true,true,,images/walnut-halwa.webp,7 days,"[{""name"":""Select weight"",""required"":true,""max"":1,""choices"":[{""label"":""500 g"",""factor"":0.5},{""label"":""1 kg"",""factor"":1}]}]",🟤,true,kg,,,,
+besan-halwa-jar,Besan Halwa Jar (300 g),Halwa Jars (300 g),Besan halwa in a 300 g jar.,425,,true,true,,images/besan-halwa-jar.webp,5 days,,🫙,true,jar,,,,
+moong-dal-halwa-jar,Moong Dal Halwa Jar (300 g),Halwa Jars (300 g),Moong dal halwa in a 300 g jar.,425,,true,true,,images/moong-dal-halwa-jar.webp,5 days,,🫙,true,jar,,,,
+badam-halwa-jar,Badam Halwa Jar (300 g),Halwa Jars (300 g),Badam halwa in a 300 g jar.,675,,true,true,,images/badam-halwa-jar.webp,7 days,,🫙,true,jar,,,,
+walnut-halwa-jar,Walnut Halwa Jar (300 g),Halwa Jars (300 g),Walnut halwa in a 300 g jar.,800,,true,true,,images/walnut-halwa-jar.webp,7 days,,🫙,true,jar,,,,
+besan-laddu,Besan Laddu,Laddus (Per Kg),Classic besan laddu.,1500,,true,true,POPULAR,images/besan-laddu.webp,15 days,"[{""name"":""Select box"",""required"":true,""max"":1,""choices"":[{""label"":""Box of 4 laddus (≈ 170 g)"",""factor"":0.16666666666666666},{""label"":""Box of 8 laddus (≈ 330 g)"",""factor"":0.3333333333333333},{""label"":""Box of 12 laddus (≈ 500 g)"",""factor"":0.5},{""label"":""Box of 24 laddus (≈ 1 kg)"",""factor"":1}]}]",🟡,true,kg,,,,
+atta-laddu,Atta Laddu,Laddus (Per Kg),Whole-wheat atta laddu.,1500,,true,true,,images/atta-laddu.webp,15 days,"[{""name"":""Select box"",""required"":true,""max"":1,""choices"":[{""label"":""Box of 4 laddus (≈ 170 g)"",""factor"":0.16666666666666666},{""label"":""Box of 8 laddus (≈ 330 g)"",""factor"":0.3333333333333333},{""label"":""Box of 12 laddus (≈ 500 g)"",""factor"":0.5},{""label"":""Box of 24 laddus (≈ 1 kg)"",""factor"":1}]}]",🟤,true,kg,,,,
+nariyal-laddu,Nariyal Laddu,Laddus (Per Kg),Coconut laddu.,1500,,true,true,,images/nariyal-laddu.webp,7 days,"[{""name"":""Select box"",""required"":true,""max"":1,""choices"":[{""label"":""Box of 4 laddus (≈ 170 g)"",""factor"":0.16666666666666666},{""label"":""Box of 8 laddus (≈ 330 g)"",""factor"":0.3333333333333333},{""label"":""Box of 12 laddus (≈ 500 g)"",""factor"":0.5},{""label"":""Box of 24 laddus (≈ 1 kg)"",""factor"":1}]}]",🥥,true,kg,,,,
+moti-boondi-laddu,Moti Boondi Laddu,Laddus (Per Kg),Moti boondi laddu.,1500,,true,true,,images/moti-boondi-laddu.webp,3 days,"[{""name"":""Select box"",""required"":true,""max"":1,""choices"":[{""label"":""Box of 4 laddus (≈ 170 g)"",""factor"":0.16666666666666666},{""label"":""Box of 8 laddus (≈ 330 g)"",""factor"":0.3333333333333333},{""label"":""Box of 12 laddus (≈ 500 g)"",""factor"":0.5},{""label"":""Box of 24 laddus (≈ 1 kg)"",""factor"":1}]}]",🟠,true,kg,,,,
+assorted-laddu-box,Assorted Laddu Box,Laddus (Per Kg),A mix of our laddus in one box.,1600,,true,true,,images/assorted-laddu-box.webp,7 days,"[{""name"":""Select box"",""required"":true,""max"":1,""choices"":[{""label"":""Box of 4 laddus (≈ 170 g)"",""factor"":0.16666666666666666},{""label"":""Box of 8 laddus (≈ 330 g)"",""factor"":0.3333333333333333},{""label"":""Box of 12 laddus (≈ 500 g)"",""factor"":0.5},{""label"":""Box of 24 laddus (≈ 1 kg)"",""factor"":1}]}]",🎁,true,kg,,,,
+dry-fruit-laddu,Dry Fruit Laddu,Laddus (Per Kg),Dry fruit laddu.,2500,,true,true,,images/dry-fruit-laddu.webp,15 days,"[{""name"":""Select box"",""required"":true,""max"":1,""choices"":[{""label"":""Box of 4 laddus (≈ 170 g)"",""factor"":0.16666666666666666},{""label"":""Box of 8 laddus (≈ 330 g)"",""factor"":0.3333333333333333},{""label"":""Box of 12 laddus (≈ 500 g)"",""factor"":0.5},{""label"":""Box of 24 laddus (≈ 1 kg)"",""factor"":1}]}]",🌰,true,kg,,,,
+besan-burfi,Besan Burfi,Burfi (Per Kg),Besan burfi. Priced per kg.,1500,,true,true,,images/besan-burfi.webp,7 days,"[{""name"":""Select weight"",""required"":true,""max"":1,""choices"":[{""label"":""500 g"",""factor"":0.5},{""label"":""1 kg"",""factor"":1}]}]",🟨,true,kg,,,,
+moong-dal-burfi,Moong Dal Burfi,Burfi (Per Kg),Moong dal burfi. Priced per kg.,1500,,true,true,,images/moong-dal-burfi.webp,7 days,"[{""name"":""Select weight"",""required"":true,""max"":1,""choices"":[{""label"":""500 g"",""factor"":0.5},{""label"":""1 kg"",""factor"":1}]}]",🟧,true,kg,,,,
+kalakand,Kalakand,Burfi (Per Kg),Milk-based kalakand. Priced per kg.,1800,,true,true,POPULAR,images/kalakand.webp,3–4 days,"[{""name"":""Select weight"",""required"":true,""max"":1,""choices"":[{""label"":""500 g"",""factor"":0.5},{""label"":""1 kg"",""factor"":1}]}]",⬜,true,kg,,,,
+mango-kalakand,Mango Kalakand,Burfi (Per Kg),Kalakand with mango. Priced per kg.,2000,,true,true,NEW,,,,🥭,true,kg,,,,
+navratri-vrat-combo,Navratri Vrat Combo,Combos & Gift Boxes,Singhare ki Barfi 250 g + Rajgira Laddoo 250 g + Vrat Namkeen 250 g + Makhana Kheer 400 ml.,749,9,true,true,VRAT FRIENDLY,,,,🪔,true,,,,,
+kanya-pujan-box,Kanya Pujan Prasad Box,Combos & Gift Boxes,"Halwa, kala chana and puri prasad for Ashtami and Navami. Choose how many kanyas.",899,,true,true,POPULAR,,,"[{""name"":""Number of kanyas"",""required"":true,""max"":1,""choices"":[{""label"":""9 kanyas"",""price"":0},{""label"":""11 kanyas"",""price"":200},{""label"":""21 kanyas"",""price"":900}]},{""name"":""Add-ons"",""required"":false,""max"":2,""choices"":[{""label"":""Chunri + bangles set (per kanya)"",""price"":450},{""label"":""Return gift pouches"",""price"":350}]}]",🙏,true,,,,,
+marwadi-sampler,Marwadi Mithai Sampler,Combos & Gift Boxes,"Besan Laddu (box of 8), Moong Dal Halwa jar (300 g) and Kalakand (250 g).",1199,,true,true,POPULAR,,,"[{""name"":""Add-ons"",""required"":false,""max"":3,""choices"":[{""label"":""Festive gift wrap"",""price"":50},{""label"":""Greeting card with your message"",""price"":30},{""label"":""Silver-foil (varq) finish"",""price"":60}]}]",🎁,true,,,,,
+dussehra-hamper,Festive Halwa & Laddu Hamper,Combos & Gift Boxes,"Badam Halwa jar, Walnut Halwa jar and a box of 12 Dry Fruit Laddus in a gift basket.",2499,,true,true,NEW,,,"[{""name"":""Add-ons"",""required"":false,""max"":3,""choices"":[{""label"":""Festive gift wrap"",""price"":50},{""label"":""Greeting card with your message"",""price"":30},{""label"":""Silver-foil (varq) finish"",""price"":60}]}]",🧺,true,,,,,

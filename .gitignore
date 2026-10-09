@@ -8,5 +8,10 @@ out
 *.log
 .env
 .env*.local
+data/inventory.csv
+data/discounts.csv
+data/orders.csv
+data/.csv-store.lock/
+public/uploads/menu/
 ordering-source/
 _scrape_*.py

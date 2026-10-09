@@ -4,6 +4,7 @@ import { detectDeliveryZone } from "@/lib/order-store/area";
 import { buildCatalog } from "@/lib/order-store/catalog";
 import { discountForCode, totals, unitPrice } from "@/lib/order-store/pricing";
 import type { CartLine, DiscountRule, InventoryRow } from "@/lib/order-store/types";
+import { readCsvStore } from "@/lib/order-store/csv-store";
 
 export const runtime = "nodejs";
 
@@ -31,18 +32,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please enter a valid email so we can send your order details." }, { status: 400 });
   }
 
-  let inventory: InventoryRow[] | null = null;
-  let discounts: DiscountRule[] = [];
-  if (STORE.backendUrl) {
-    const url = new URL(STORE.backendUrl);
-    url.searchParams.set("payment-check", Date.now().toString());
-    const sheetResponse = await fetch(url, { cache: "no-store" }).catch(() => null);
-    const sheet = await sheetResponse?.json().catch(() => null);
-    if (!sheetResponse?.ok || !sheet?.ok || !Array.isArray(sheet.items)) {
-      return NextResponse.json({ error: "We couldn't verify the live menu. Please try again." }, { status: 503 });
-    }
-    inventory = sheet.items;
-    discounts = Array.isArray(sheet.discounts) ? sheet.discounts : [];
+  let inventory: InventoryRow[];
+  let discounts: DiscountRule[];
+  try {
+    const store = await readCsvStore();
+    inventory = store.items;
+    discounts = store.discounts;
+  } catch {
+    return NextResponse.json({ error: "We couldn't verify the live menu. Please try again." }, { status: 503 });
   }
 
   const { items } = buildCatalog(inventory);

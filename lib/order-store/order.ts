@@ -36,7 +36,7 @@ export const newOrderId = (now = new Date()) =>
   "MK" + now.toISOString().slice(2, 10).replace(/-/g, "") + Math.floor(1000 + Math.random() * 9000);
 
 // ---------------------------------------------------------------------------
-// Google Sheet backend (backend/Code.gs)
+// Local server CSV backend. The browser never reads or writes the CSV directly.
 // ---------------------------------------------------------------------------
 
 export interface BackendResult {
@@ -47,16 +47,14 @@ export interface BackendResult {
   items?: InventoryRow[];
 }
 
-/** Send the order to the Sheet, which checks and reduces the stock. */
-export async function sendOrder(order: Order): Promise<BackendResult> {
-  // text/plain body keeps this a "simple" request (no CORS preflight to Apps Script).
-  const r = await fetch(STORE.backendUrl, { method: "POST", body: JSON.stringify(order) });
+/** Submit the order to the server, which checks and reduces CSV stock. */
+export async function sendOrder(order: Order, paymentProof?: string): Promise<BackendResult> {
+  const r = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order, paymentProof }) });
   return r.json();
 }
 
 export async function fetchInventory(): Promise<{ items: InventoryRow[]; discounts: DiscountRule[] }> {
-  const url = STORE.backendUrl + (STORE.backendUrl.includes("?") ? "&" : "?") + "t=" + Date.now();
-  const r = await fetch(url);
+  const r = await fetch("/api/orders", { cache: "no-store" });
   const j = await r.json();
   if (!j.ok || !Array.isArray(j.items)) throw new Error("bad inventory");
   return { items: j.items, discounts: Array.isArray(j.discounts) ? j.discounts : [] };

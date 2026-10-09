@@ -5,7 +5,7 @@ import type { Category, InventoryRow, MenuItem } from "./types";
 /** Items with a pre-built page at /item/<id>/ (everything in data/menu.ts). */
 const STATIC_ITEM_IDS = new Set(MENU.flatMap((c) => c.items.map((i) => i.id)));
 
-/** Link to an item's page. Items added only in the Google Sheet use /item/?id=… */
+/** Link to an item page. Items without a built-in page use /item/?id=… */
 export const itemHref = (id: string) =>
   STATIC_ITEM_IDS.has(id) ? `/orders/item/${id}/` : `/orders/item/?id=${encodeURIComponent(id)}`;
 
@@ -15,10 +15,9 @@ export interface Catalog {
 }
 
 /**
- * Build the menu. Without a Sheet, it's data/menu.ts as written. With one,
- * the Sheet decides which items exist (in the Sheet's order) and their name,
- * category, price and stock; data/menu.ts still supplies sizes, emoji and any
- * text the Sheet leaves blank.
+ * Build the menu from the CSV inventory rows. The starter menu supplies
+ * defaults for original item details; CSV values control published items,
+ * names, categories, prices, availability, and stock.
  */
 export function buildCatalog(inventory: InventoryRow[] | null): Catalog {
   const base: Record<string, MenuItem> = {};

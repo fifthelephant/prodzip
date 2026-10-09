@@ -171,22 +171,20 @@ function CheckoutForm() {
                 method: "POST", headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   orderId: result.razorpay_order_id, paymentId: result.razorpay_payment_id,
-                  signature: result.razorpay_signature, amount: created.amount,
+                  merchantOrderId: id, signature: result.razorpay_signature, amount: created.amount,
                 }),
               });
               const verification = await verified.json();
               if (!verified.ok || !verification.ok) throw new Error(verification.error || "Payment couldn't be verified.");
 
-              if (STORE.backendUrl) {
-                const sheetResult = await sendOrder(order);
-                if (!sheetResult.ok) throw new Error("Payment succeeded, but we couldn't record the order. Please contact us with your order ID.");
-              }
+              const storeResult = await sendOrder(order, verification.paymentProof);
+              if (!storeResult.ok) throw new Error("Payment succeeded, but we couldn't record the order. Please contact us with your order ID.");
               const orders = load<Record<string, Order>>("orders", {});
               orders[id] = order;
               save("orders", orders);
               clearCart();
               resetCheckoutOrderId();
-              if (STORE.backendUrl) refreshInventory();
+              refreshInventory();
               router.push(`/orders/order/?id=${encodeURIComponent(id)}`);
             } catch (error) {
               setPlacing(false);
@@ -206,25 +204,23 @@ function CheckoutForm() {
       return;
     }
 
-    if (STORE.backendUrl) {
-      setPlacing(true);
-      let res = null;
-      try { res = await sendOrder(order); } catch { res = null; }
-      if (!res) {
-        setPlacing(false);
-        toast("Couldn't reach our kitchen. Please check your internet and try again.");
-        return;
-      }
-      if (!res.ok) {
-        setPlacing(false);
-        if (Array.isArray(res.items)) applyInventory(res.items);
-        const names = (res.problems || []).map((p) => (p.left > 0 ? `${p.name} (only ${p.left} left)` : `${p.name} (sold out)`));
-        setCartNotice(names.length
-          ? `Sorry, some items just ran out: ${names.join(", ")}. We've updated your cart. Please check it and place the order again.`
-          : "Sorry, we couldn't place your order. Please try again.");
-        router.push("/orders/cart/");
-        return;
-      }
+    setPlacing(true);
+    let res = null;
+    try { res = await sendOrder(order); } catch { res = null; }
+    if (!res) {
+      setPlacing(false);
+      toast("Couldn't reach our kitchen. Please check your internet and try again.");
+      return;
+    }
+    if (!res.ok) {
+      setPlacing(false);
+      if (Array.isArray(res.items)) applyInventory(res.items);
+      const names = (res.problems || []).map((p) => (p.left > 0 ? `${p.name} (only ${p.left} left)` : `${p.name} (sold out)`));
+      setCartNotice(names.length
+        ? `Sorry, some items just ran out: ${names.join(", ")}. We've updated your cart. Please check it and place the order again.`
+        : res.error || "Sorry, we couldn't place your order. Please try again.");
+      router.push("/orders/cart/");
+      return;
     }
 
     setPlacing(true);
@@ -233,7 +229,7 @@ function CheckoutForm() {
     save("orders", orders);
     clearCart();
     resetCheckoutOrderId();
-    if (STORE.backendUrl) refreshInventory(); // our own order used up stock
+    refreshInventory(); // our own order used up stock
     router.push(`/orders/order/?id=${encodeURIComponent(id)}`);
   }
 
