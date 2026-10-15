@@ -174,7 +174,7 @@ export default function InventoryManagement({ signedIn, configured }: { signedIn
       if (data.charges) applyCharges(data.charges);
       if (Array.isArray(data.orders)) setOrders(data.orders);
       if (Array.isArray(data.history)) setHistory(data.history);
-      setItem(null); setDiscount(null); setMessage(operation === "save-payments" ? "Payment methods updated." : operation === "save-charges" ? "Packaging and handling charges updated." : operation === "save-order-status" ? "Order status updated." : "Saved to the local CSV store.");
+      setItem(null); setDiscount(null); setMessage(operation === "save-payments" ? "Payment methods updated." : operation === "save-charges" ? "Packaging and handling charges updated." : operation === "save-order-status" ? "Order status updated." : "Saved to the persistent CSV store.");
       return true;
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save changes."); return false; }
     finally { setBusy(false); }

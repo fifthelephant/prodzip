@@ -30,6 +30,8 @@ interface ShopContext {
   discounts: DiscountRule[];
   payments: PaymentSettings;
   charges: ChargeSettings;
+  discountCode: string;
+  setDiscountCode: (code: string) => void;
   cart: CartLine[];
   cartCount: number;
   bump: number;
@@ -103,6 +105,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const [discounts, setDiscounts] = useState<DiscountRule[]>([]);
   const [payments, setPayments] = useState<PaymentSettings>(DEFAULT_PAYMENTS);
   const [charges, setCharges] = useState<ChargeSettings>(DEFAULT_CHARGES);
+  const [discountCode, setDiscountCodeState] = useState("");
   const [cart, setCartState] = useState<CartLine[]>([]);
   const [address, setAddressState] = useState<Address | null>(null);
   const [fulfillmentMode, setFulfillmentModeState] = useState<FulfillmentMode>("delivery");
@@ -134,6 +137,11 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const refreshing = useRef<Promise<void> | null>(null);
 
   const toast = useCallback((msg: string) => setToastState((t) => ({ msg, n: t.n + 1 })), []);
+  const setDiscountCode = useCallback((code: string) => {
+    const normalized = code.trim().toUpperCase();
+    setDiscountCodeState(normalized);
+    save("discountCode", normalized);
+  }, []);
 
   const clearAddress = useCallback(() => {
     setAddressState(null);
@@ -150,8 +158,8 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     cartRef.current = next;
     setCartState(next);
     save("cart", next);
-    if (!next.length) clearAddress();
-  }, [clearAddress]);
+    if (!next.length) { clearAddress(); setDiscountCode(""); }
+  }, [clearAddress, setDiscountCode]);
 
   const setCatalogBoth = useCallback((c: Catalog) => {
     catalogRef.current = c;
@@ -212,6 +220,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     cartRef.current = load<CartLine[]>("cart", []);
     setCartState(cartRef.current);
     setAddressState(load<Address | null>("address", null));
+    setDiscountCodeState(load<string>("discountCode", ""));
     setFulfillmentModeState(load<FulfillmentMode>("fulfillment", "delivery"));
     setCustomerState(load<Customer>("customer", {}));
     loadedRef.current = true;
@@ -343,7 +352,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   const retryInventory = useCallback(() => { setInventoryFailed(false); refreshInventory(); }, [refreshInventory]);
 
   const value = useMemo<ShopContext>(() => ({
-    ready, inventoryFailed, retryInventory, now, catalog, discounts, payments, charges, cart,
+    ready, inventoryFailed, retryInventory, now, catalog, discounts, payments, charges, discountCode, setDiscountCode, cart,
     cartCount: cart.reduce((a, l) => a + l.qty, 0), bump,
     qtyOf: (id) => qtyOfItem(cart, id), roomFor, addToCart, setQty, clearCart,
     address, setAddress, clearAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, setCartNotice,
@@ -351,7 +360,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
     addressOpen, openAddress, closeAddress, drawerOpen, setDrawerOpen,
     filters, setFilters, searchText, setSearchText, collapsed, setCollapsed, showSearch, setShowSearch, showFilters, setShowFilters,
     getMenuScroll, saveMenuScroll, takePendingJump, jumpTick, jumpTo, checkoutOrderId, resetCheckoutOrderId
-  }), [ready, inventoryFailed, retryInventory, now, catalog, discounts, payments, charges, cart, bump, roomFor, addToCart, setQty, clearCart,
+  }), [ready, inventoryFailed, retryInventory, now, catalog, discounts, payments, charges, discountCode, setDiscountCode, cart, bump, roomFor, addToCart, setQty, clearCart,
     address, setAddress, clearAddress, fulfillmentMode, setFulfillmentMode, customer, setCustomer, cartNotice, applyInventory, refreshInventory, toast, toastState,
     addressOpen, openAddress, closeAddress, drawerOpen, setDrawerOpen, filters, searchText, collapsed, showSearch, showFilters,
     getMenuScroll, saveMenuScroll, takePendingJump, jumpTick, jumpTo, checkoutOrderId, resetCheckoutOrderId]);

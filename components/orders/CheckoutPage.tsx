@@ -6,7 +6,7 @@ import { STORE } from "@/lib/order-store/store-config";
 import { resolveDeliveryZone, showsDeliveryActualsNote } from "@/lib/order-store/area";
 import { hourLabel, money } from "@/lib/order-store/format";
 import { sendOrder } from "@/lib/order-store/order";
-import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
+import { discountForCode, selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
 import { buildSlots, calendarRange, deliveryPlan, fmtDay, isoDay, openOrderSlots, parseDay, pastCutoff } from "@/lib/order-store/schedule";
 import { save, load } from "@/lib/order-store/storage";
 import type { Order } from "@/lib/order-store/types";
@@ -24,7 +24,7 @@ export default function CheckoutPage() {
 
 function CheckoutForm() {
   const shop = useShop();
-  const { cart, catalog, payments, charges, now: shopNow, address, openAddress, customer, setCustomer,
+  const { cart, catalog, discounts, discountCode, payments, charges, now: shopNow, address, openAddress, customer, setCustomer,
     fulfillmentMode, toast, applyInventory, setCartNotice, clearCart, refreshInventory, checkoutOrderId, resetCheckoutOrderId } = shop;
   const router = useRouter();
 
@@ -50,7 +50,8 @@ function CheckoutForm() {
   const fieldRefs = useRef<Partial<Record<Field, HTMLDivElement | null>>>({});
 
   const zone = resolveDeliveryZone(address, fulfillmentMode);
-  const t = totals(cart, catalog.items, fulfillmentMode, zone, undefined, charges);
+  const activeDiscount = discountForCode(discountCode, discounts);
+  const t = totals(cart, catalog.items, fulfillmentMode, zone, activeDiscount, charges);
   const showActualsNote = showsDeliveryActualsNote(address, fulfillmentMode);
   const plan = useMemo(() => deliveryPlan(cart, catalog.items, now), [cart, catalog.items, now]);
   const days = useMemo(() => buildSlots(plan), [plan]);
@@ -102,6 +103,7 @@ function CheckoutForm() {
     if (plan.calendar && !slotV) { toast("Please choose a delivery date and time."); return; }
     if (!payments.cod && !payments.razorpay) { toast("Ordering is paused. Please call us to place this order."); return; }
     if ((payment === "COD" && !payments.cod) || (payment === "RAZORPAY" && !payments.razorpay)) { toast("That payment method is not available. Please choose another one."); return; }
+    if (discountCode && t.discount <= 0) { toast("That discount code is invalid or no longer applies. Please update it in your cart."); router.push("/orders/cart/"); return; }
 
     // The 6 PM cut-off (or a same-day slot) may have passed while the form was being filled.
     const freshNow = new Date();
@@ -138,7 +140,7 @@ function CheckoutForm() {
         return { id: item.id, name: item.name, options: selLabel(item, l.sel), qty: l.qty, price: unitPrice(item, l.sel) * l.qty };
       }),
       notes: v("notes"),
-      discountCode: undefined,
+      discountCode: discountCode || undefined,
       totals: { sub: t.sub, discount: t.discount, delivery: t.delivery, tax: t.tax, packaging: t.packaging, total: t.total }
     };
 
@@ -153,7 +155,7 @@ function CheckoutForm() {
             fulfillment: fulfillmentMode,
             addressText: fulfillmentMode === "delivery" ? address?.text || "" : "",
             zone,
-            discountCode: "",
+            discountCode,
             customer: { name: c.name, email: c.email, phone: c.phone },
           }),
         });

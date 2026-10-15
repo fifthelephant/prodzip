@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  distDir: ".next-build",
+  distDir: process.env.NEXT_DIST_DIR || ".next-build",
   images: { unoptimized: true },
 };
 

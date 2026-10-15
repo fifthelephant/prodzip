@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { STORE } from "@/lib/order-store/store-config";
 import { money } from "@/lib/order-store/format";
 import { resolveDeliveryZone, showsDeliveryActualsNote } from "@/lib/order-store/area";
-import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
+import { discountForCode, selLabel, totals, unitPrice } from "@/lib/order-store/pricing";
 import { deliveryPlan, fmtDay } from "@/lib/order-store/schedule";
 import { Bill, Loading, VegMark } from "./bits";
 import { useShop } from "./ShopProvider";
 
 export default function CartPage() {
-  const { ready, inventoryFailed, retryInventory, cart, catalog, charges, now, cartNotice, roomFor, setQty, address, openAddress, fulfillmentMode } = useShop();
+  const { ready, inventoryFailed, retryInventory, cart, catalog, discounts, charges, discountCode, setDiscountCode, now, cartNotice, roomFor, setQty, address, openAddress, fulfillmentMode } = useShop();
   const router = useRouter();
+  const [couponDraft, setCouponDraft] = useState(discountCode);
+  const [couponError, setCouponError] = useState("");
   useEffect(() => { document.title = `Your Order · ${STORE.name}`; }, []);
+  useEffect(() => setCouponDraft(discountCode), [discountCode]);
 
   if (!ready) return <Loading failed={inventoryFailed} onRetry={retryInventory} />;
 
@@ -34,8 +37,19 @@ export default function CartPage() {
   }
 
   const zone = resolveDeliveryZone(address, fulfillmentMode);
-  const t = totals(cart, catalog.items, fulfillmentMode, zone, undefined, charges);
+  const activeDiscount = discountForCode(discountCode, discounts);
+  const t = totals(cart, catalog.items, fulfillmentMode, zone, activeDiscount, charges);
   const plan = deliveryPlan(cart, catalog.items, now);
+
+  const applyCoupon = () => {
+    const code = couponDraft.trim().toUpperCase();
+    const rule = discountForCode(code, discounts);
+    const result = totals(cart, catalog.items, fulfillmentMode, zone, rule, charges);
+    if (!rule || result.discount <= 0) { setCouponError("That code is invalid or does not apply to these items."); return; }
+    setDiscountCode(code);
+    setCouponDraft(code);
+    setCouponError("");
+  };
 
   const proceed = () => {
     if (fulfillmentMode === "pickup") router.push("/orders/checkout/");
@@ -68,6 +82,13 @@ export default function CartPage() {
           );
         })}
         <p><Link href="/orders/" className="link-btn">+ ADD MORE ITEMS</Link></p>
+        <div className="coupon-entry">
+          <input aria-label="Discount code" placeholder="Enter discount code" value={couponDraft} onChange={(e) => setCouponDraft(e.target.value.toUpperCase())} />
+          <button type="button" className="btn quiet" onClick={applyCoupon}>Apply</button>
+          {discountCode ? <button type="button" className="btn quiet" onClick={() => { setDiscountCode(""); setCouponDraft(""); setCouponError(""); }}>Remove</button> : null}
+        </div>
+        {couponError ? <p className="coupon-message" role="alert">{couponError}</p> : null}
+        {discountCode && t.discount > 0 ? <p className="coupon-message success" role="status">{discountCode} applied.</p> : null}
         <Bill t={t} fulfillment={fulfillmentMode} zone={zone} />
         {showsDeliveryActualsNote(address, fulfillmentMode) ? <p className="delivery-actuals-note">Delivery Charges are Extra and to be paid on actuals by Customer</p> : null}
         {fulfillmentMode === "delivery" && t.belowMin ? <p className="note">Minimum order for delivery is {money(STORE.minOrder)}.</p> : null}
