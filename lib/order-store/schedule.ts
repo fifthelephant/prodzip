@@ -1,7 +1,7 @@
 // Dates, delivery slots, the 6 PM cut-off and fixed-day items (Navratri thalis).
 // Everything takes `now` so it can be tested with any date.
 
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import type { CartLine, MenuItem } from "./types";
 
 export const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());

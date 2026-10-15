@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import { detectDeliveryZone } from "@/lib/order-store/area";
 import { buildCatalog } from "@/lib/order-store/catalog";
 import { discountForCode, totals, unitPrice } from "@/lib/order-store/pricing";

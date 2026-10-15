@@ -1,30 +1,28 @@
-# Local CSV inventory and menu store
+# CSV store and deployment data
 
-Google Sheets is no longer part of the live menu, inventory, checkout, or admin flow. The app uses CSV files as its data store:
+The application stores live menu inventory, discounts, orders, payment settings, and audit history as CSV files. Keep these files outside the code repository so data edits do not change the build or get replaced by a deployment.
 
-- `data/inventory.csv` — menu items, prices, stock, availability, images, and options (runtime file, ignored by Git).
-- `data/discounts.csv` — discount rules and redemption counts (runtime file, ignored by Git).
-- `data/orders.csv` — successfully placed orders and customer details (runtime file, ignored by Git).
-
-The repository includes `data/starter-inventory.csv`, migrated from the menu data that was previously built into the site. Runtime CSVs are ignored by Git to prevent order and customer data from being committed. If the configured data directory does not have CSVs yet, the server copies the starter CSVs into it on first request. The private admin portal at `/admin/inventorymanagement` edits the same files that the customer menu and checkout use.
+The files are `inventory.csv`, `discounts.csv`, `orders.csv`, `payment-settings.csv`, and `history.csv`. The private portal at `/admin/inventorymanagement` writes to this store; storefront and checkout routes read the same files. History records changes to items, discounts, orders, payment methods, and charges. Order history omits customer contact details and addresses.
 
 ## Local use
 
-No spreadsheet credentials or backend URL are needed. By default the server uses the repository's `data/` folder and creates the runtime CSV files from the starter data on first use. Run `startup.bat` on Windows or `./startup.sh` on Linux/macOS. Changes made in the admin portal are written to the CSV files on disk.
+No spreadsheet credentials or backend URL are needed. By default, local runs use the sibling folder `MKCater-data` beside the repository. Set `MK_DATA_DIR` to choose another writable directory. The store creates missing files on its first request. If no inventory file exists, it creates the initial catalogue from the built-in source in `lib/order-store/menu-config.ts`; missing discounts and orders start empty.
 
-Optional local environment variables:
-
-- `MK_DATA_DIR` — alternate writable directory for the three CSV files. Leave unset to use `<repo>/data`.
-- `MK_UPLOAD_DIR` — folder for menu photos uploaded through the portal. Leave unset to use `<repo>/public/uploads/menu`.
+Set `MK_UPLOAD_DIR` to store uploaded menu images outside the checkout as well. Without it, uploads use `public/uploads/menu/`.
 
 ## Production persistence
 
-The production host must run the app on a persistent server or VM with writable disk. Do not use an ephemeral/serverless filesystem for this CSV store. Use a stable directory outside a deployment checkout, for example `/srv/shared/prodzip-data`, and set `MK_DATA_DIR=/srv/shared/prodzip-data` in the production server's private environment. Set `MK_UPLOAD_DIR=/srv/shared/prodzip-uploads/menu` to preserve uploaded images across code deployments. Create these directories and grant the Node process write access before starting the site.
+Run the app on a persistent server or VM with a writable disk. Do not use an ephemeral/serverless filesystem for this CSV store. Configure a stable directory outside each deployment checkout, for example:
 
-On the first run with an empty persistent directory, the app copies the repository's starter CSVs into it. The website always reads and updates that persistent CSV directory afterward. Back up the CSV files and image folder regularly. Run a single application process against the files; the CSV store uses a filesystem lock to serialize concurrent requests, but it is not intended as a multi-host database.
+```text
+MK_DATA_DIR=/srv/shared/prodzip-data
+MK_UPLOAD_DIR=/srv/shared/prodzip-uploads/menu
+```
 
-Local and production use the same CSV format and application code, but each environment has its own files unless you deliberately mount one shared filesystem in both places. A local edit does not automatically synchronize to production.
+Create both directories and grant the Node process write access before starting the site. Build and deploy the code independently; keep the data directory when replacing the checkout. Back up the CSV files and upload folder regularly. The CSV store uses a filesystem lock for a single application process and is not intended as a multi-host database.
+
+Local and production use the same formats and code, but separate data directories by default. A local edit does not automatically synchronize to production.
 
 ## Menu and stock behavior
 
-Set stock to a number to enforce a limit; leave it blank for unlimited stock. A placed order checks current availability and stock, writes the order, and decrements finite stock. Discount redemption counts are updated in the same store operation. Draft items remain private until published. Images uploaded through the portal are stored in the configured upload directory, and their `/menu-image/<filename>` URLs are kept in `inventory.csv`.
+Set stock to a number to enforce a limit; leave it blank for unlimited stock. A placed order checks current availability and stock, writes the order, and decrements finite stock. Discount redemption counts update as part of order placement. Draft items remain private until published. Uploaded image URLs are kept in `inventory.csv`.

@@ -24,7 +24,7 @@ For day-to-day editing, `npm run dev` starts a local preview that reloads as you
 
 ## Menu and inventory data
 
-The store uses CSV files in `data/` for the live menu, stock, discounts, and orders. The private portal at `/admin/inventorymanagement` updates these files; customer pages and checkout read from the same CSV-backed API. Google Sheets credentials are not required. See [`backend/order-store/SETUP.md`](backend/order-store/SETUP.md) for local and persistent production setup.
+The store keeps menu, stock, discounts, orders, payment settings, and change history in CSV files outside the code repo. The private portal at `/admin/inventorymanagement` updates these files; customer pages and checkout read from the same CSV-backed API. Google Sheets credentials are not required. See [`backend/order-store/SETUP.md`](backend/order-store/SETUP.md) for local and persistent production setup.
 
 On a production VM, set `MK_DATA_DIR` and `MK_UPLOAD_DIR` to durable writable folders outside the deployment checkout so menu edits, orders, and uploaded photos survive code updates. Local and production use the same format and code, with separate files by default.
 
@@ -39,7 +39,7 @@ All image paths live in `content/images.ts`.
 
 ## Change the menu
 
-Use `/admin/inventorymanagement` to add and update the live menu without changing code. `data/starter-inventory.csv` is the checked-in menu migrated from the existing starter catalog; the server copies it to the runtime `data/inventory.csv` on first use.
+Use `/admin/inventorymanagement` to add and update the live menu without changing code. A new empty data directory is seeded from the built-in starter catalogue in `lib/order-store/menu-config.ts`; CSV data is not required to build or deploy the code.
 
 ## Change contact details and wording
 

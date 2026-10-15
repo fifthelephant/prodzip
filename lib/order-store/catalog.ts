@@ -1,4 +1,4 @@
-import { MENU } from "@/data/order-store/menu";
+import { MENU } from "@/lib/order-store/menu-config";
 import { slug } from "./format";
 import type { Category, InventoryRow, MenuItem } from "./types";
 

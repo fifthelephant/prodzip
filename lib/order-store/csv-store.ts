@@ -1,23 +1,25 @@
 import { mkdir, readFile, rename, stat, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { MENU } from "@/data/order-store/menu";
-import { DEFAULT_CHARGES, DEFAULT_PAYMENTS, ORDER_STATUSES, type ChargeSettings, type DiscountRule, type InventoryRow, type Order, type OrderStatus, type PaymentSettings } from "@/lib/order-store/types";
+import { MENU } from "@/lib/order-store/menu-config";
+import { DEFAULT_CHARGES, DEFAULT_PAYMENTS, ORDER_STATUSES, type ChargeSettings, type DiscountRule, type HistoryEntry, type InventoryRow, type Order, type OrderStatus, type PaymentSettings } from "@/lib/order-store/types";
 
 export interface CsvStore {
   items: InventoryRow[];
   discounts: DiscountRule[];
   orders: Order[];
+  history: HistoryEntry[];
   payments: PaymentSettings;
   charges: ChargeSettings;
 }
 
-const seedDirectory = path.join(process.cwd(), "data");
-const dataDirectory = process.env.MK_DATA_DIR?.trim() ? path.resolve(process.env.MK_DATA_DIR.trim()) : seedDirectory;
+const dataDirectory = process.env.MK_DATA_DIR?.trim() ? path.resolve(process.env.MK_DATA_DIR.trim()) : path.resolve(process.cwd(), "..", "MKCater-data");
+const seedDirectory = process.env.MK_STARTER_DATA_DIR?.trim() ? path.resolve(process.env.MK_STARTER_DATA_DIR.trim()) : dataDirectory;
 const inventoryPath = path.join(dataDirectory, "inventory.csv");
 const discountsPath = path.join(dataDirectory, "discounts.csv");
 const ordersPath = path.join(dataDirectory, "orders.csv");
 const paymentsPath = path.join(dataDirectory, "payment-settings.csv");
+const historyPath = path.join(dataDirectory, "history.csv");
 const lockPath = path.join(dataDirectory, ".csv-store.lock");
 
 const INVENTORY_COLUMNS: (keyof InventoryRow)[] = [
@@ -29,6 +31,7 @@ const DISCOUNT_COLUMNS: (keyof DiscountRule)[] = [
 ];
 const ORDER_COLUMNS: (keyof Order)[] = ["id", "placedAt", "slot", "payment", "fulfillment", "customer", "address", "items", "notes", "discountCode", "status", "totals"];
 const SETTINGS_COLUMNS = ["razorpay", "cod", "packaging_percent", "packaging_max"] as const;
+const HISTORY_COLUMNS: (keyof HistoryEntry)[] = ["id", "at", "actor", "action", "entity", "entityId", "summary", "changes"];
 
 function csvCell(value: unknown): string {
   const text = value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
@@ -115,6 +118,10 @@ function ordersFromCsv(text: string): Order[] {
   }));
 }
 
+function historyFromCsv(text: string): HistoryEntry[] {
+  return parseCsv(text).map((r) => ({ id: r.id, at: r.at, actor: r.actor, action: r.action, entity: r.entity, entityId: r.entityId, summary: r.summary, changes: r.changes }));
+}
+
 function starterInventory(): InventoryRow[] {
   return MENU.flatMap((category) => category.items.map((item) => ({
     id: item.id, name: item.name, category: category.name, description: item.desc, price: item.price,
@@ -149,15 +156,16 @@ async function ensureFiles() {
   try { await stat(paymentsPath); } catch {
     await writeAtomic(paymentsPath, toCsv([settingsRow(DEFAULT_PAYMENTS, DEFAULT_CHARGES)], [...SETTINGS_COLUMNS]));
   }
+  try { await stat(historyPath); } catch { await writeAtomic(historyPath, toCsv([], HISTORY_COLUMNS)); }
 }
 
 async function readUnlocked(): Promise<CsvStore> {
   await ensureFiles();
-  const [inventoryCsv, discountsCsv, ordersCsv, paymentsCsv] = await Promise.all([
-    readFile(inventoryPath, "utf8"), readFile(discountsPath, "utf8"), readFile(ordersPath, "utf8"), readFile(paymentsPath, "utf8"),
+  const [inventoryCsv, discountsCsv, ordersCsv, paymentsCsv, historyCsv] = await Promise.all([
+    readFile(inventoryPath, "utf8"), readFile(discountsPath, "utf8"), readFile(ordersPath, "utf8"), readFile(paymentsPath, "utf8"), readFile(historyPath, "utf8"),
   ]);
   const settings = settingsFromCsv(paymentsCsv);
-  return { items: inventoryFromCsv(inventoryCsv), discounts: discountsFromCsv(discountsCsv), orders: ordersFromCsv(ordersCsv), payments: settings.payments, charges: settings.charges };
+  return { items: inventoryFromCsv(inventoryCsv), discounts: discountsFromCsv(discountsCsv), orders: ordersFromCsv(ordersCsv), history: historyFromCsv(historyCsv), payments: settings.payments, charges: settings.charges };
 }
 
 async function acquireLock() {
@@ -178,12 +186,36 @@ export async function withCsvStore<T>(work: (store: CsvStore) => Promise<T> | T)
   await acquireLock();
   try {
     const store = await readUnlocked();
+    const before = { items: structuredClone(store.items), discounts: structuredClone(store.discounts), orders: structuredClone(store.orders), payments: structuredClone(store.payments), charges: structuredClone(store.charges) };
     const result = await work(store);
+    const audit = (entity: string, key: string, previous: unknown, next: unknown) => {
+      if (JSON.stringify(previous) === JSON.stringify(next)) return;
+      const oldValues = previous && typeof previous === "object" ? previous as Record<string, unknown> : {};
+      const newValues = next && typeof next === "object" ? next as Record<string, unknown> : {};
+      const changedFields = [...new Set([...Object.keys(oldValues), ...Object.keys(newValues)])].filter((field) => JSON.stringify(oldValues[field]) !== JSON.stringify(newValues[field]));
+      const action = previous == null ? "created" : next == null ? "deleted" : "updated";
+      const summary = `${entity} ${key} ${action}${changedFields.length ? ` · ${changedFields.join(", ")}` : ""}`;
+      const safeSnapshot = (value: unknown) => {
+        if (entity !== "Order" || !value || typeof value !== "object") return value ?? null;
+        const { customer: _customer, address: _address, notes: _notes, ...order } = value as Order;
+        return order;
+      };
+      store.history.unshift({ id: randomUUID(), at: new Date().toISOString(), actor: "Store", action, entity, entityId: key, summary, changes: JSON.stringify({ before: safeSnapshot(previous), after: safeSnapshot(next) }) });
+    };
+    for (const [entity, oldRows, newRows] of [["Item", before.items, store.items], ["Discount", before.discounts, store.discounts], ["Order", before.orders, store.orders]] as const) {
+      const keyOf = (row: typeof oldRows[number]) => entity === "Item" ? (row as InventoryRow).id : entity === "Discount" ? (row as DiscountRule).code : (row as Order).id;
+      const oldMap = new Map(oldRows.map((row) => [keyOf(row), row]));
+      const newMap = new Map(newRows.map((row) => [keyOf(row), row]));
+      for (const key of new Set([...oldMap.keys(), ...newMap.keys()])) audit(entity, key, oldMap.get(key), newMap.get(key));
+    }
+    audit("Store settings", "payments", before.payments, store.payments);
+    audit("Store settings", "charges", before.charges, store.charges);
     await Promise.all([
       writeAtomic(inventoryPath, toCsv(store.items, INVENTORY_COLUMNS)),
       writeAtomic(discountsPath, toCsv(store.discounts, DISCOUNT_COLUMNS)),
       writeAtomic(ordersPath, toCsv(store.orders, ORDER_COLUMNS)),
       writeAtomic(paymentsPath, toCsv([settingsRow(store.payments, store.charges)], [...SETTINGS_COLUMNS])),
+      writeAtomic(historyPath, toCsv(store.history, HISTORY_COLUMNS)),
     ]);
     return result;
   } finally { await rm(lockPath, { recursive: true, force: true }); }
@@ -231,5 +263,6 @@ export async function writeStoreRows(store: CsvStore) {
     writeAtomic(discountsPath, toCsv(store.discounts, DISCOUNT_COLUMNS)),
     writeAtomic(ordersPath, toCsv(store.orders, ORDER_COLUMNS)),
     writeAtomic(paymentsPath, toCsv([settingsRow(store.payments, store.charges)], [...SETTINGS_COLUMNS])),
+    writeAtomic(historyPath, toCsv(store.history, HISTORY_COLUMNS)),
   ]);
 }

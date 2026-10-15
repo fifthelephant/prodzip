@@ -1,4 +1,4 @@
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 
 export const money = (n: number) => STORE.currency + Math.round(n).toLocaleString("en-IN");
 export const plain = (n: number) => Math.round(n).toLocaleString("en-IN");

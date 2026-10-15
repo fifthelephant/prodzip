@@ -1,4 +1,4 @@
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import { money } from "./format";
 import { DEFAULT_CHARGES, DEFAULT_PAYMENTS, type ChargeSettings, type DiscountRule, type InventoryRow, type Order, type PaymentSettings } from "./types";
 

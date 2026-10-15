@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import { hourLabel } from "@/lib/order-store/format";
 import { isRetired } from "@/lib/order-store/schedule";
 import { BackIcon, CartIcon, MenuIcon } from "./bits";

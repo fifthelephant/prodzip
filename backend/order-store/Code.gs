@@ -446,7 +446,7 @@ function setup() {
   const ss = SpreadsheetApp.getActive();
   let inv = ss.getSheetByName(INVENTORY_TAB);
   if (!inv) {
-    // If you imported inventory-template.csv into the first tab, just rename it.
+    // Name the imported inventory sheet "Inventory" before running the setup.
     const first = ss.getSheets()[0];
     if (first && String(first.getRange(1, 1).getValue()).trim().toLowerCase() === "id") {
       inv = first.setName(INVENTORY_TAB);

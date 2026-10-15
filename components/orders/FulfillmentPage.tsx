@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import type { FulfillmentMode } from "@/lib/order-store/types";
 import { useShop } from "./ShopProvider";
 

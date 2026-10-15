@@ -67,7 +67,7 @@ export async function POST(request: Request) {
         if (!order || !status) throw new Error("That order could not be updated.");
         order.status = status;
       }
-      return { ok: true, items: store.items, discounts: store.discounts, payments: store.payments, charges: store.charges, orders: store.orders };
+      return { ok: true, items: store.items, discounts: store.discounts, payments: store.payments, charges: store.charges, orders: store.orders, history: store.history };
     });
     return NextResponse.json({ ...result, razorpayConfigured: razorpayKeysConfigured() }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not save changes." }, { status: 503 }); }

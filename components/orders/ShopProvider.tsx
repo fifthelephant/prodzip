@@ -6,7 +6,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import { buildCatalog, itemHref, type Catalog } from "@/lib/order-store/catalog";
 import { hasStockLimit, qtyOfItem, reconcileCart, roomFor as roomForPure } from "@/lib/order-store/cart";
 import { isFiltering, matches, NO_FILTERS, type Filters } from "@/lib/order-store/filters";

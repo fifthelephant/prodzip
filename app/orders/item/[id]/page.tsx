@@ -1,4 +1,4 @@
-import { MENU } from "@/data/order-store/menu";
+import { MENU } from "@/lib/order-store/menu-config";
 import ItemPage from "@/components/orders/ItemPage";
 
 // One page per menu item, built ahead of time (static export).

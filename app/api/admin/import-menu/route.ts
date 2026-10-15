@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MENU } from "@/data/order-store/menu";
+import { MENU } from "@/lib/order-store/menu-config";
 import { hasAdminSession, sameOrigin } from "@/lib/admin/auth";
 import { withCsvStore } from "@/lib/order-store/csv-store";
 import type { InventoryRow } from "@/lib/order-store/types";
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
         order_from: item.orderFrom || "", visible_until: item.visibleUntil || "", includes: (item.includes || []).join("\n"),
       })));
       store.items.push(...missing);
-      return { ok: true, imported: missing.length, items: store.items, discounts: store.discounts };
+      return { ok: true, imported: missing.length, items: store.items, discounts: store.discounts, history: store.history };
     });
     return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

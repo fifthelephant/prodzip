@@ -176,6 +176,17 @@ export interface Order {
   totals: { sub: number; discount: number; delivery: number; tax: number; packaging: number; total: number };
 }
 
+export interface HistoryEntry {
+  id: string;
+  at: string;
+  actor: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  summary: string;
+  changes: string;
+}
+
 export interface StoreConfig {
   name: string;
   tagline: string;

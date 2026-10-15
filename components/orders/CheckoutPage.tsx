@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import { resolveDeliveryZone, showsDeliveryActualsNote } from "@/lib/order-store/area";
 import { hourLabel, money } from "@/lib/order-store/format";
 import { sendOrder } from "@/lib/order-store/order";

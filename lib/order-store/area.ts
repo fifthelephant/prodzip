@@ -1,4 +1,4 @@
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import type { Address, DeliveryZone, FulfillmentMode } from "./types";
 
 const AREAS = STORE.deliveryAreas.map((a) => a.toLowerCase());

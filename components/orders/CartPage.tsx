@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import { money } from "@/lib/order-store/format";
 import { resolveDeliveryZone, showsDeliveryActualsNote } from "@/lib/order-store/area";
 import { selLabel, totals, unitPrice } from "@/lib/order-store/pricing";

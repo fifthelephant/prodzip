@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import { money } from "@/lib/order-store/format";
 import { itemHref } from "@/lib/order-store/catalog";
 import { isFiltering, matches } from "@/lib/order-store/filters";

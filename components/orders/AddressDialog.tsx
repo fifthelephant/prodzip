@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap } from "leaflet";
-import { STORE } from "@/data/order-store/config";
+import { STORE } from "@/lib/order-store/store-config";
 import { detectDeliveryZone, inServiceArea, inServiceBox } from "@/lib/order-store/area";
 import type { Address } from "@/lib/order-store/types";
 import { useShop } from "./ShopProvider";
